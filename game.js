@@ -142,7 +142,7 @@ function paintChain() {
 
   const fill = Math.min(1, Math.max(0, chain.blockProgress / 1e9));
   el.blockBar.style.transform = `scaleX(${fill.toFixed(4)})`;
-  el.blockBar.style.backgroundColor = chain.status === "live" ? "var(--blue)" : "var(--faint)";
+  el.blockBar.style.backgroundColor = chain.status === "live" ? "var(--accent)" : "var(--faint)";
   el.blockBar.parentElement.setAttribute("aria-valuenow", String(Math.round(fill * 100)));
 
   el.source.textContent =
@@ -308,7 +308,7 @@ function loop(now) {
     game.torque = Math.max(0, game.torque - TORQUE_DECAY * dt);
     el.torque.style.transform = `scaleX(${(game.torque / TORQUE_MAX).toFixed(3)})`;
     el.torque.parentElement.setAttribute("aria-valuenow", String(Math.round((Math.max(0, game.torque) / TORQUE_MAX) * 100)));
-    el.torque.style.backgroundColor = game.torque < 25 ? "var(--red)" : "var(--blue)";
+    el.torque.style.backgroundColor = game.torque < 25 ? "var(--red)" : "var(--accent)";
     if (game.torque <= 0) { endShift(); }
   }
 

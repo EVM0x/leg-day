@@ -43,12 +43,19 @@ python3 -m http.server 8080
 
 ```
 index.html   markup, HUD, how-it-works sheet
-style.css    light bench palette, Barlow Condensed / IBM Plex Mono / Quicksand
+style.css    chalk-paper palette, Big Shoulders Display / JetBrains Mono / Work Sans
 game.js      polling, wheel state machine, scoring, canvas rendering
 DESIGN.md    the visual direction: palette, type, dials, and the reasons for them
 ```
 
 Scores are kept in `localStorage` under `legday.shifts.v1`, in the player's browser only.
+
+## What this is not
+
+The CODE lane already has projects on the same feed. This one is not a dashboard, not a
+prediction market, not a hold-and-bail game and not a race to spectate: the only thing it
+does with the telemetry is set the tempo you have to tap. It reads `/v1/status` and nothing
+else, it has no wallet code, and it pays nothing but a number in your own browser.
 
 ## Status
 
