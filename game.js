@@ -1,4 +1,4 @@
-/* LEG DAY — a Squeekchain arcade.
+/* LEG DAY, a Squeekchain arcade.
    The marker turns at the cadence published by api.squeekchain.com/v1/status.
    Nothing here signs, spends, or stores a key. */
 
@@ -132,20 +132,25 @@ function paintChain() {
   el.mode.dataset.mode = chain.status === "boot" ? "boot" : chain.status;
 
   const rpm = chain.status === "live" ? chain.rpmMilli / 1000 : null;
-  el.rpm.textContent = rpm === null ? (chain.status === "offline" ? "unreachable" : "asleep") : rpm.toFixed(1) + " rpm";
-  el.block.textContent = chain.blockHeight ? "#" + chain.blockHeight : "—";
-  el.dist.textContent = chain.distanceMm ? (chain.distanceMm / 1000).toFixed(2) + " m" : "0 m";
+  el.rpm.textContent = rpm === null
+    ? (chain.status === "offline" ? "unreachable" : chain.status === "boot" ? "no reading" : "asleep")
+    : rpm.toFixed(1) + " rpm";
+  el.block.textContent = chain.blockHeight ? "#" + chain.blockHeight : "waiting";
+  el.dist.textContent = chain.distanceMm
+    ? (chain.distanceMm / 1000).toFixed(2) + " m"
+    : chain.seen ? "0.00 m" : "no reading";
 
   const fill = Math.min(1, Math.max(0, chain.blockProgress / 1e9));
   el.blockBar.style.transform = `scaleX(${fill.toFixed(4)})`;
   el.blockBar.style.backgroundColor = chain.status === "live" ? "var(--blue)" : "var(--faint)";
+  el.blockBar.parentElement.setAttribute("aria-valuenow", String(Math.round(fill * 100)));
 
   el.source.textContent =
     chain.status === "live"
-      ? "Live from api.squeekchain.com/v1/status — he is running"
+      ? "Live from api.squeekchain.com/v1/status, he is running"
       : chain.status === "offline"
-        ? "api.squeekchain.com is not answering — the wheel is on a ghost tempo"
-        : "api.squeekchain.com/v1/status — he is asleep, so the wheel replays its last live cadence";
+        ? "api.squeekchain.com is not answering, so the wheel is on a ghost tempo"
+        : "api.squeekchain.com/v1/status: he is asleep, so the wheel replays its last live cadence";
 }
 
 function settle(blocks) {
@@ -175,6 +180,7 @@ function startShift() {
   el.steps.textContent = "0";
   el.combo.textContent = "0";
   el.results.hidden = true;
+  wheel.focus({ preventScroll: true });
   if (rafId === null) loop(performance.now());
 }
 
@@ -184,28 +190,27 @@ function endShift() {
 
   const acc = game.taps ? Math.round((game.perfects / game.taps) * 100) : 0;
   const played = game.modeAtStart === "live" ? "LIVE" : "GHOST";
-  const line = `LEG DAY — ${game.steps} steps · best combo ${game.bestCombo} · ${acc}% cadence · ${played} · block #${game.blockAtStart}`;
+  const line = `LEG DAY: ${game.steps} steps, best combo ${game.bestCombo}, ${acc}% cadence, ${played}, block #${game.blockAtStart}`;
 
   const shifts = readShifts();
   shifts.push({ steps: game.steps, combo: game.bestCombo, acc, played, block: game.blockAtStart, at: Date.now() });
   shifts.sort((a, b) => b.steps - a.steps);
-  writeShifts(shifts.slice(0, STORE_MAX));
+  const kept = shifts.slice(0, STORE_MAX);
+  writeShifts(kept);
 
-  const place = shifts.findIndex((s) => s.steps === game.steps && s.at === shifts.find((x) => x.at === Math.max(...shifts.map((y) => y.at)))?.at);
-  const rank = shifts.filter((s) => s.steps > game.steps).length + 1;
+  const rank = kept.filter((s) => s.steps > game.steps).length + 1;
 
   el.rSteps.textContent = game.steps;
   el.rCombo.textContent = game.bestCombo;
   el.rAcc.textContent = acc + "%";
   el.rMode.textContent = played;
-  el.rBlock.textContent = game.blockAtStart ? "#" + game.blockAtStart : "—";
-  el.rPlace.textContent = "#" + Math.min(rank, shifts.length) + " of " + shifts.length;
+  el.rBlock.textContent = game.blockAtStart ? "#" + game.blockAtStart : "none";
+  el.rPlace.textContent = "#" + Math.min(rank, kept.length) + " of " + kept.length;
   el.rLine.textContent = line;
   el.rNote.textContent = game.modeAtStart === "live"
     ? `Settlement paid ${game.settlement} steps on real blocks.`
     : "Ghost shift: no settlement bonus was paid, because he was not running.";
-  el.results.hidden = false;
-  void place;
+  openSheet(el.results, document.getElementById("againBtn"));
 }
 
 function tap() {
@@ -271,6 +276,7 @@ function loop(now) {
     game.angle = normalise(game.angle + clampedRps() * sag * 2 * Math.PI * dt);
     game.torque = Math.max(0, game.torque - TORQUE_DECAY * dt);
     el.torque.style.transform = `scaleX(${(game.torque / TORQUE_MAX).toFixed(3)})`;
+    el.torque.parentElement.setAttribute("aria-valuenow", String(Math.round((Math.max(0, game.torque) / TORQUE_MAX) * 100)));
     el.torque.style.backgroundColor = game.torque < 25 ? "var(--red)" : "var(--blue)";
     if (game.torque <= 0) { endShift(); }
   }
@@ -384,7 +390,7 @@ function draw() {
     ctx.fillStyle = "#17171b";
     ctx.font = "600 " + Math.round(R * 0.115) + 'px "Barlow Condensed", sans-serif';
     ctx.fillText("TAP TO START", cx, cy + R * 0.22);
-    ctx.fillStyle = "#6e6e7a";
+    ctx.fillStyle = "#63636c";
     ctx.font = Math.round(R * 0.055) + 'px "IBM Plex Mono", monospace';
     ctx.fillText(chain.status === "live" ? "LIVE SHIFT" : "GHOST SHIFT", cx, cy + R * 0.37);
   }
@@ -421,27 +427,54 @@ function writeShifts(list) {
 
 wheel.addEventListener("pointerdown", (e) => { e.preventDefault(); tap(); });
 document.addEventListener("keydown", (e) => {
-  if (e.code === "Space" || e.code === "ArrowDown") {
+  if (e.code === "Space" || e.code === "ArrowDown" || e.code === "Enter") {
     if (document.activeElement && document.activeElement.tagName === "BUTTON") return;
     e.preventDefault();
     tap();
   }
 });
 
-document.getElementById("againBtn").addEventListener("click", () => { el.results.hidden = true; startShift(); });
+document.getElementById("againBtn").addEventListener("click", () => { closeSheet(el.results); startShift(); });
 document.getElementById("copyBtn").addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText(el.rLine.textContent);
     document.getElementById("copyBtn").textContent = "COPIED";
     setTimeout(() => { document.getElementById("copyBtn").textContent = "COPY RESULT"; }, 1400);
   } catch {
-    document.getElementById("copyBtn").textContent = "SELECT THE LINE ABOVE";
+    const range = document.createRange();
+    range.selectNodeContents(el.rLine);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    document.getElementById("copyBtn").textContent = "LINE SELECTED, COPY IT";
   }
 });
 
 const howBtn = document.getElementById("howBtn");
-howBtn.addEventListener("click", () => { el.how.hidden = false; howBtn.setAttribute("aria-expanded", "true"); });
-document.getElementById("closeHow").addEventListener("click", () => { el.how.hidden = true; howBtn.setAttribute("aria-expanded", "false"); });
+let returnFocus = null;
+
+function openSheet(sheet, focusTarget) {
+  returnFocus = document.activeElement;
+  sheet.hidden = false;
+  if (sheet === el.how) howBtn.setAttribute("aria-expanded", "true");
+  if (focusTarget) focusTarget.focus();
+}
+
+function closeSheet(sheet) {
+  sheet.hidden = true;
+  if (sheet === el.how) howBtn.setAttribute("aria-expanded", "false");
+  if (returnFocus && document.contains(returnFocus)) returnFocus.focus();
+  returnFocus = null;
+}
+
+howBtn.addEventListener("click", () => openSheet(el.how, document.getElementById("closeHow")));
+document.getElementById("closeHow").addEventListener("click", () => closeSheet(el.how));
+
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  if (!el.how.hidden) closeSheet(el.how);
+  else if (!el.results.hidden) closeSheet(el.results);
+});
 
 window.addEventListener("resize", sizeCanvas);
 window.addEventListener("orientationchange", () => setTimeout(sizeCanvas, 120));

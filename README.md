@@ -10,10 +10,10 @@ When he is asleep, the game says so and drops into a **GHOST SHIFT**: it replays
 
 Open the site and tap. No wallet, no account, no download.
 
-- **Tap / click / space** — step. Perfect taps hold the combo, loose taps break it.
-- **Power arc** — narrows as he speeds up. The arc you see is the arc you hit.
-- **Torque** — the shift ends when it reaches zero.
-- **Block fill** — the bar is the block being mined right now. When a block closes during a live shift you bank one step per ten combo.
+- **Tap / click / space**: step. Perfect taps hold the combo, loose taps break it.
+- **Power arc**: narrows as he speeds up. The arc you see is the arc you hit.
+- **Torque**: the shift ends when it reaches zero.
+- **Block fill**: the bar is the block being mined right now. When a block closes during a live shift you bank one step per ten combo.
 
 ## What it reads
 
@@ -44,6 +44,7 @@ python3 -m http.server 8080
 index.html   markup, HUD, how-it-works sheet
 style.css    light bench palette, Barlow Condensed / IBM Plex Mono / Quicksand
 game.js      polling, wheel state machine, scoring, canvas rendering
+DESIGN.md    the visual direction: palette, type, dials, and the reasons for them
 ```
 
 Scores are kept in `localStorage` under `legday.shifts.v1`, in the player's browser only.
