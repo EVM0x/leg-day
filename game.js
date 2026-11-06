@@ -181,12 +181,16 @@ function startShift() {
   el.combo.textContent = "0";
   el.results.hidden = true;
   wheel.focus({ preventScroll: true });
-  if (rafId === null) loop(performance.now());
+  if (rafId === null) {
+    lastFrame = performance.now();
+    rafId = requestAnimationFrame(loop);
+  }
 }
 
 function endShift() {
   game.running = false;
   if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
+  draw();
 
   const acc = game.taps ? Math.round((game.perfects / game.taps) * 100) : 0;
   const played = game.modeAtStart === "live" ? "LIVE" : "GHOST";
@@ -259,6 +263,33 @@ function flash(text, tone) {
 
 /* ---------- rendering ---------- */
 
+let canvasInk = null;
+
+function ink() {
+  if (canvasInk) return canvasInk;
+  const cs = getComputedStyle(document.documentElement);
+  const v = (name) => cs.getPropertyValue(name).trim();
+  canvasInk = {
+    rim: v("--wheel-rim"),
+    guide: v("--wheel-guide"),
+    trail: v("--wheel-trail"),
+    pad: v("--wheel-pad"),
+    padIdle: v("--wheel-pad-idle"),
+    good: v("--wheel-good"),
+    arc: v("--wheel-arc"),
+    arcIdle: v("--wheel-arc-idle"),
+    tick: v("--wheel-tick"),
+    spoke: v("--wheel-spoke"),
+    hub: v("--wheel-hub"),
+    hubLine: v("--wheel-hub-line"),
+    marker: v("--wheel-marker"),
+    markerIdle: v("--wheel-marker-idle"),
+    label: v("--wheel-label"),
+    sublabel: v("--wheel-sublabel"),
+  };
+  return canvasInk;
+}
+
 function sizeCanvas() {
   const r = wheel.getBoundingClientRect();
   const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -282,7 +313,8 @@ function loop(now) {
   }
 
   draw();
-  rafId = requestAnimationFrame(loop);
+  // only keep the frame loop alive while a shift is running: an idle wheel is static
+  rafId = game.running ? requestAnimationFrame(loop) : null;
 }
 
 function draw() {
@@ -292,20 +324,21 @@ function draw() {
   const cx = w / 2;
   const cy = h / 2;
   const R = Math.max(20, Math.min(w, h) / 2 - 10);
+  const C = ink();
 
   ctx.clearRect(0, 0, w, h);
 
   // rim
   ctx.beginPath();
   ctx.arc(cx, cy, R, 0, Math.PI * 2);
-  ctx.strokeStyle = "#e0e0e6";
+  ctx.strokeStyle = C.rim;
   ctx.lineWidth = 1;
   ctx.stroke();
 
   // inner guide
   ctx.beginPath();
   ctx.arc(cx, cy, R * 0.62, 0, Math.PI * 2);
-  ctx.strokeStyle = "#e8e8ee";
+  ctx.strokeStyle = C.guide;
   ctx.stroke();
 
   const half = arcHalfWidth();
@@ -316,7 +349,7 @@ function draw() {
     const trail = (55 * Math.PI) / 180;
     ctx.beginPath();
     ctx.arc(cx, cy, R * 0.93, game.angle - trail - Math.PI / 2, game.angle - Math.PI / 2);
-    ctx.strokeStyle = "rgba(68, 96, 207, 0.22)";
+    ctx.strokeStyle = C.trail;
     ctx.lineWidth = 9;
     ctx.stroke();
   }
@@ -326,13 +359,13 @@ function draw() {
   ctx.moveTo(cx, cy);
   ctx.arc(cx, cy, R * 0.93, Math.PI - half - Math.PI / 2, Math.PI + half - Math.PI / 2);
   ctx.closePath();
-  ctx.fillStyle = game.running ? "#fdfbc8" : "#f2f2f4";
+  ctx.fillStyle = game.running ? C.pad : C.padIdle;
   ctx.fill();
 
   // good window
-  strokeArc(cx, cy, R * 0.93, Math.PI - goodHalf, Math.PI + goodHalf, "#efe2b8", 9);
+  strokeArc(cx, cy, R * 0.93, Math.PI - goodHalf, Math.PI + goodHalf, C.good, 9);
   // power arc
-  strokeArc(cx, cy, R * 0.93, Math.PI - half, Math.PI + half, game.running ? "#4460cf" : "#c9cad2", 9);
+  strokeArc(cx, cy, R * 0.93, Math.PI - half, Math.PI + half, game.running ? C.arc : C.arcIdle, 9);
 
   // power arc ticks
   for (let i = 0; i <= 4; i++) {
@@ -342,7 +375,7 @@ function draw() {
     ctx.beginPath();
     ctx.moveTo(p1.x, p1.y);
     ctx.lineTo(p2.x, p2.y);
-    ctx.strokeStyle = "#c9cad2";
+    ctx.strokeStyle = C.tick;
     ctx.lineWidth = 1;
     ctx.stroke();
   }
@@ -355,7 +388,7 @@ function draw() {
     ctx.beginPath();
     ctx.moveTo(cx, cy);
     ctx.lineTo(p.x, p.y);
-    ctx.strokeStyle = "#eeeef2";
+    ctx.strokeStyle = C.spoke;
     ctx.lineWidth = 1;
     ctx.stroke();
   }
@@ -363,9 +396,9 @@ function draw() {
   // hub
   ctx.beginPath();
   ctx.arc(cx, cy, R * 0.10, 0, Math.PI * 2);
-  ctx.fillStyle = "#f5f5f7";
+  ctx.fillStyle = C.hub;
   ctx.fill();
-  ctx.strokeStyle = "#e0e0e6";
+  ctx.strokeStyle = C.hubLine;
   ctx.stroke();
 
   // marker
@@ -374,23 +407,23 @@ function draw() {
   ctx.beginPath();
   ctx.moveTo(mi.x, mi.y);
   ctx.lineTo(mp.x, mp.y);
-  ctx.strokeStyle = game.running ? "#17171b" : "#b6b6c2";
+  ctx.strokeStyle = game.running ? C.marker : C.markerIdle;
   ctx.lineWidth = 2;
   ctx.stroke();
 
   ctx.beginPath();
   ctx.arc(mp.x, mp.y, 5, 0, Math.PI * 2);
-  ctx.fillStyle = game.running ? "#17171b" : "#b6b6c2";
+  ctx.fillStyle = game.running ? C.marker : C.markerIdle;
   ctx.fill();
 
   // centre readout while idle: the only call to action the page needs
   if (!game.running) {
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillStyle = "#17171b";
+    ctx.fillStyle = C.label;
     ctx.font = "600 " + Math.round(R * 0.115) + 'px "Barlow Condensed", sans-serif';
     ctx.fillText("TAP TO START", cx, cy + R * 0.22);
-    ctx.fillStyle = "#63636c";
+    ctx.fillStyle = C.sublabel;
     ctx.font = Math.round(R * 0.055) + 'px "IBM Plex Mono", monospace';
     ctx.fillText(chain.status === "live" ? "LIVE SHIFT" : "GHOST SHIFT", cx, cy + R * 0.37);
   }
@@ -450,6 +483,38 @@ document.getElementById("copyBtn").addEventListener("click", async () => {
   }
 });
 
+/* ---------- theme ---------- */
+
+const THEME_KEY = "legday.theme.v1";
+const themeBtn = document.getElementById("themeBtn");
+const themeMeta = document.querySelector('meta[name="theme-color"]');
+
+function applyTheme(name, persist) {
+  document.documentElement.dataset.theme = name;
+  canvasInk = null;
+  themeBtn.setAttribute("aria-pressed", String(name === "dark"));
+  if (themeMeta) themeMeta.setAttribute("content", name === "dark" ? "#14151c" : "#f5f5f7");
+  if (persist) {
+    try { localStorage.setItem(THEME_KEY, name); } catch { /* private mode */ }
+  }
+}
+
+function currentTheme() {
+  return document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+}
+
+// the head script already set the first paint; this syncs the button and the meta colour
+applyTheme(currentTheme(), false);
+
+themeBtn.addEventListener("click", () => {
+  applyTheme(currentTheme() === "dark" ? "light" : "dark", true);
+  paintChain();
+  if (rafId === null) draw();
+  // the toggle is a one-shot control, so focus goes back to the board and Space
+  // keeps taking steps instead of flipping the theme again
+  wheel.focus({ preventScroll: true });
+});
+
 const howBtn = document.getElementById("howBtn");
 let returnFocus = null;
 
@@ -476,14 +541,14 @@ document.addEventListener("keydown", (e) => {
   else if (!el.results.hidden) closeSheet(el.results);
 });
 
-window.addEventListener("resize", sizeCanvas);
-window.addEventListener("orientationchange", () => setTimeout(sizeCanvas, 120));
+window.addEventListener("resize", () => { sizeCanvas(); draw(); });
+window.addEventListener("orientationchange", () => setTimeout(() => { sizeCanvas(); draw(); }, 120));
 
 sizeCanvas();
 paintChain();
+draw();
 poll();
 setInterval(poll, POLL_MS);
-rafId = requestAnimationFrame(loop);
 
 // exposed for testing only
 window.LEGDAY = { chain, game, tap, startShift, endShift, arcHalfWidth, clampedRps };

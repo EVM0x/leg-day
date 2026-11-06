@@ -11,9 +11,68 @@
   --gold: #84660f;
   --green: #1b7849;
   --red: #b03a2e;
+  --live-bg: #eaf6ef;
+  --ghost-bg: #fbf6e4;
+  --offline-bg: #fbeeec;
   --display: "Barlow Condensed", "Arial Narrow", sans-serif;
   --data: "IBM Plex Mono", ui-monospace, monospace;
   --voice: "Quicksand", system-ui, sans-serif;
+
+  /* the wheel is drawn on a canvas, so it needs its own tokens */
+  --wheel-rim: #e0e0e6;
+  --wheel-guide: #e8e8ee;
+  --wheel-trail: rgba(68, 96, 207, 0.22);
+  --wheel-pad: #fdfbc8;
+  --wheel-pad-idle: #f2f2f4;
+  --wheel-good: #efe2b8;
+  --wheel-arc: #4460cf;
+  --wheel-arc-idle: #c9cad2;
+  --wheel-tick: #c9cad2;
+  --wheel-spoke: #eeeef2;
+  --wheel-hub: #f5f5f7;
+  --wheel-hub-line: #e0e0e6;
+  --wheel-marker: #17171b;
+  --wheel-marker-idle: #b6b6c2;
+  --wheel-label: #17171b;
+  --wheel-sublabel: #63636c;
+}
+
+/* Night shift. Same room after dark: paper goes to blue-black, the one accent
+   stays blue, the landing pad stays warm. Every value keeps WCAG AA on its own
+   background, which is why the accent is lighter here than in daylight. */
+:root[data-theme="dark"] {
+  --bg: #14151c;
+  --raised: #1e202a;
+  --ink: #f0f0f4;
+  --line: #2b2d38;
+  --dim: #a8a9b6;
+  --faint: #9a9ba8;
+  --blue: #93a6ff;
+  --blue-lit: #a9b8ff;
+  --cream: #2c2a18;
+  --gold: #e3bd5c;
+  --green: #5cd3a0;
+  --red: #ff9a8a;
+  --live-bg: #12301f;
+  --ghost-bg: #2e2712;
+  --offline-bg: #33191a;
+
+  --wheel-rim: #2b2d38;
+  --wheel-guide: #23252f;
+  --wheel-trail: rgba(143, 164, 255, 0.26);
+  --wheel-pad: #2c2a18;
+  --wheel-pad-idle: #1e202a;
+  --wheel-good: #3d3620;
+  --wheel-arc: #93a6ff;
+  --wheel-arc-idle: #3a3d4a;
+  --wheel-tick: #3a3d4a;
+  --wheel-spoke: #22242d;
+  --wheel-hub: #14151c;
+  --wheel-hub-line: #2b2d38;
+  --wheel-marker: #f0f0f4;
+  --wheel-marker-idle: #6b6d7c;
+  --wheel-label: #f0f0f4;
+  --wheel-sublabel: #a8a9b6;
 }
 
 * { box-sizing: border-box; }
@@ -92,7 +151,7 @@ body {
 .chip[data-mode="live"] {
   border-color: var(--green);
   color: var(--green);
-  background: #eaf6ef;
+  background: var(--live-bg);
 }
 
 .chip[data-mode="live"]::before {
@@ -106,8 +165,8 @@ body {
   animation: pulse 1.6s ease-in-out infinite;
 }
 
-.chip[data-mode="ghost"] { border-color: var(--gold); color: var(--gold); background: #fbf6e4; }
-.chip[data-mode="offline"] { border-color: var(--red); color: var(--red); background: #fbeeec; }
+.chip[data-mode="ghost"] { border-color: var(--gold); color: var(--gold); background: var(--ghost-bg); }
+.chip[data-mode="offline"] { border-color: var(--red); color: var(--red); background: var(--offline-bg); }
 
 @keyframes pulse {
   0%, 100% { opacity: 1; }
@@ -129,6 +188,7 @@ body {
 }
 
 .ghostbtn:hover { color: var(--ink); border-color: var(--faint); }
+.ghostbtn[aria-pressed="true"] { color: var(--ink); border-color: var(--faint); background: var(--raised); }
 @media (pointer: coarse) { .ghostbtn, .primary { min-height: 44px; } }
 .ghostbtn:active { background: var(--raised); border-color: var(--dim); }
 .ghostbtn:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }

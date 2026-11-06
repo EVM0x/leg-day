@@ -7,6 +7,15 @@
 <meta name="description" content="You are Squeektoshi's legs. Tap in time with the real wheel and keep the shift alive.">
 <meta name="theme-color" content="#f5f5f7">
 <meta name="squeekchain-project" content="PROJECT_ID_PLACEHOLDER">
+<script>
+try {
+  var saved = localStorage.getItem("legday.theme.v1");
+  if (saved !== "dark" && saved !== "light") {
+    saved = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  }
+  document.documentElement.dataset.theme = saved;
+} catch (e) {}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;600&family=IBM+Plex+Mono:wght@400;600&family=Quicksand:wght@600&display=swap">
@@ -22,6 +31,7 @@
     </div>
     <nav class="hud__right" aria-label="Arcade controls">
       <span class="chip" id="mode" data-mode="boot">CONNECTING</span>
+      <button class="ghostbtn" id="themeBtn" type="button" aria-pressed="false">NIGHT MODE</button>
       <button class="ghostbtn" id="howBtn" type="button" aria-expanded="false" aria-controls="how">HOW THIS WORKS</button>
     </nav>
   </header>

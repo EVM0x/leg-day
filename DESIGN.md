@@ -59,6 +59,19 @@ Uppercase labels with `0.12em` to `0.16em` tracking are used on HUD labels only,
   wheel moves. Bars transition at `0.12s` linear because they are a gauge. Nothing
   fades up, floats, scales or bounces on entry.
 
+## Two rooms
+
+| | DAY (default) | NIGHT |
+|---|---|---|
+| Ground | `#f5f5f7` paper | `#14151c` blue-black |
+| Accent | `#4460cf` | `#93a6ff`, the same blue lifted until it clears AA on dark |
+| Landing pad | cream `#fdfbc8` | warm amber `#2c2a18` |
+| Why | A daylight room with one instrument in it | The same room after dark, where a lit wheel is the only light source |
+
+Day follows `prefers-color-scheme` on first visit, the toggle overrides it, and the
+choice is remembered in `localStorage` under `legday.theme.v1`. The wheel is drawn on a
+canvas, so its colours are tokens too (`--wheel-*`), never literals in the drawing code.
+
 ## Non-negotiables
 
 1. **Never claim live when it is not live.** When the hamster is idle or the reading is
@@ -68,5 +81,10 @@ Uppercase labels with `0.12em` to `0.16em` tracking are used on HUD labels only,
    `/v1/status` or from this browser's own saved shifts. Nothing is estimated.
 3. **No wallet, no signature, no token.** The footer says so, and the code has no
    wallet code to disable.
-4. **Light only.** A dark version would break the daylight-room idea, so no toggle is
-   shipped. If a dark mode is ever wanted, it is a new direction, not a filter pass.
+4. **Two rooms, one identity.** The arcade ships in two lights: **DAY** (paper) and
+   **NIGHT** (blue-black). They are the same room at different hours, not a filter pass:
+   the wheel, the arc, the cream landing pad and the one blue accent survive both, and
+   every text token is re-picked so it clears WCAG AA on its own background. The accent
+   is lighter at night because `#4460cf` fails on a dark ground; the landing pad becomes
+   warm amber instead of cream for the same reason. A theme that breaks a single control
+   is a defect, so both rooms are clicked through before shipping.

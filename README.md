@@ -13,6 +13,7 @@ Open the site and tap. No wallet, no account, no download.
 - **Tap / click / space**: step. Perfect taps hold the combo, loose taps break it.
 - **Power arc**: narrows as he speeds up. The arc you see is the arc you hit.
 - **Torque**: the shift ends when it reaches zero.
+- **NIGHT MODE**: one button flips the arcade between a daylight room and the same room after dark. Both themes are fully styled, and the choice is remembered.
 - **Block fill**: the bar is the block being mined right now. When a block closes during a live shift you bank one step per ten combo.
 
 ## What it reads
