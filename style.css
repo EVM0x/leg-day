@@ -404,12 +404,12 @@ body {
    link so the claim can be checked rather than taken on trust. */
 .foot__mark {
   font-family: var(--data);
-  font-size: 9px;
-  letter-spacing: 0.16em;
+  font-size: 10px;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--faint);
   border: 1px solid var(--line);
-  padding: 3px 7px;
+  padding: 4px 8px;
   text-decoration: none;
   white-space: nowrap;
   /* when the note fills the row and the mark drops to a line of its own, this

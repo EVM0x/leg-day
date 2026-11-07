@@ -243,14 +243,14 @@ const LegCard = (() => {
     // the maker's mark: a screenshot of this card is how the arcade travels, so
     // the corner it lands in says where it came from. It sits clear of the
     // bottom edge, not on it.
-    const mark = "SC FROM EVM0X";
+    const mark = "BUILT BY EVM0X";
     x.fillStyle = C.soft;
-    x.font = '400 13px "JetBrains Mono", ui-monospace, monospace';
+    x.font = '400 14px "JetBrains Mono", ui-monospace, monospace';
     const markW = x.measureText(mark).width;
     x.strokeStyle = C.line;
     x.lineWidth = 1;
-    x.strokeRect(1128 - markW - 16, 602, markW + 16, 20);
-    x.fillText(mark, 1128 - markW - 8, 616);
+    x.strokeRect(1128 - markW - 18, 600, markW + 18, 22);
+    x.fillText(mark, 1128 - markW - 9, 615);
     return cv;
   }
 
