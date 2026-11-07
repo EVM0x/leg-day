@@ -75,6 +75,10 @@ try {
         <span class="k">BLOCK</span>
         <span class="v" id="block">waiting</span>
       </div>
+      <div class="live__row">
+        <span class="k">ROUND SEED</span>
+        <span class="v" id="roundTag" data-round="none">no seed</span>
+      </div>
       <div class="live__row live__row--fill">
         <span class="k">BLOCK FILL</span>
         <div class="bar bar--thin" role="progressbar" aria-label="Block fill" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="blockBar"></i></div>
@@ -105,12 +109,14 @@ try {
         <div><dt>Cadence accuracy</dt><dd id="rAcc">0%</dd></div>
         <div><dt>Played</dt><dd id="rMode">not played</dd></div>
         <div><dt>Block</dt><dd id="rBlock">none</dd></div>
+        <div><dt>Round seed</dt><dd id="rRound">unseeded</dd></div>
         <div><dt>Place</dt><dd id="rPlace">not ranked</dd></div>
         <div><dt>Ghost race</dt><dd id="rGhost">no ghost</dd></div>
       </dl>
       <p class="sheet__line" id="rLine"></p>
       <div class="sheet__actions">
         <button class="primary" id="againBtn" type="button">RUN IT AGAIN</button>
+        <button class="ghostbtn" id="cardBtn" type="button">SAVE CARD</button>
         <button class="ghostbtn" id="copyBtn" type="button">COPY RESULT</button>
       </div>
       <p class="sheet__note" id="rNote"></p>
@@ -139,6 +145,7 @@ try {
         <li><strong>Blocks pay.</strong> The bar under BLOCK FILL is the real block being mined right now. When a block closes while he is running, you bank a settlement bonus of one step per ten combo.</li>
         <li><strong>Sleep stops play.</strong> When he stops, the arcade drops to a GHOST SHIFT: it replays the last live cadence and says so. Ghost steps never bank a settlement bonus.</li>
         <li><strong>Every shift leaves a ghost.</strong> Your taps are recorded as a timeline, and the next shift races it: the small marks inside the wheel are the angles your ghost hit, and VS GHOST is the gap between you. The code on the results card carries a ghost to anyone else, no server needed.</li>
+        <li><strong>Every shift is a round.</strong> The block open when you press START is the block you played, and its state seeds the challenge: how wide the power arc is, how far it wanders and how often it swings are all derived from that block. Same block, same shift, for everyone. ROUND SEED is the first four hex of the seed, so two players on one block can compare.</li>
         <li><strong>You can hear it.</strong> The ticks are one per quarter turn, so the tempo you hear is the tempo he is running. Sound is generated in the browser, not loaded from a file, and the button in the corner turns it off.</li>
       </ol>
       <table class="fields">
@@ -152,13 +159,14 @@ try {
           <tr><td><code>measurement.distanceMm</code></td><td>how far he has run</td></tr>
         </tbody>
       </table>
-      <p class="sheet__note">If that API stops answering, the block bar is read straight from <code>SqueekCore.state()</code> at <code>0xFD6C166D4B8E2962E65746a13e5a0797CD4dE0c4</code> on Sepolia over a public RPC, so the settled work on screen stays true. The cadence cannot be read from the chain, so the wheel drops to a ghost tempo and says so rather than inventing one.</p>
+      <p class="sheet__note">The block bar and the round seed are read from <code>SqueekCore.state()</code> at <code>0xFD6C166D4B8E2962E65746a13e5a0797CD4dE0c4</code> on Sepolia over a public RPC, on every poll, whether or not the API is answering, so the settled work on screen stays true. The seed is FNV-1a over <code>sqk:&lt;settledThroughRound&gt;:&lt;cumulativeWork&gt;:&lt;blockHeight&gt;</code> as trimmed hex, then mulberry32 draws the arc width, the drift and the swing count from it. One <code>eth_call</code> plus a few lines of arithmetic reproduces the round you played, without trusting this page. The cadence cannot be read from the chain, so when the API is silent the wheel drops to a ghost tempo and says so rather than inventing one.</p>
       <p class="sheet__note">Scores are kept in this browser only. Nothing is signed, nothing is spent, and no wallet is ever asked for.</p>
     </div>
   </aside>
 
 </main>
 <script src="audio.js"></script>
+<script src="round.js"></script>
 <script src="ghost.js"></script>
 <script src="game.js"></script>
 </body>

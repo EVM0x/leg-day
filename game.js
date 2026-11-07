@@ -57,6 +57,9 @@ const el = {
   soundBtn: document.getElementById("soundBtn"),
   startBtn: document.getElementById("startBtn"),
   startSub: document.getElementById("startSub"),
+  roundTag: document.getElementById("roundTag"),
+  rRound: document.getElementById("rRound"),
+  cardBtn: document.getElementById("cardBtn"),
 };
 
 const chain = {
@@ -71,6 +74,8 @@ const chain = {
   source: null,            // api | chain | null
   workPerThousandBlocks: 0,
   paused: false,
+  round: null,             // the block that seeds the next shift
+  core: null,              // last SqueekCore.state() reading
 };
 
 const game = {
@@ -90,6 +95,7 @@ const game = {
   ghost: null,
   ghostIdx: 0,
   ghostSteps: 0,
+  round: null,             // frozen at START: the round you are actually playing
 };
 
 let rafId = null;
@@ -97,6 +103,7 @@ let lastFrame = 0;
 let flashTimer = null;
 let lastPaintedMode = null;
 let ghostDeltaText = "";
+let lastCard = null;
 
 /* ---------- chain ---------- */
 
@@ -110,12 +117,33 @@ function clampedRps() {
   return Math.min(RPS_MAX, Math.max(RPS_MIN, baseRps()));
 }
 
+// the round in force: the frozen one while you play, the upcoming one while you
+// are only looking at the wheel
+function activeRound() {
+  return game.running ? game.round : chain.round;
+}
+
 function arcHalfWidth() {
   const t = (clampedRps() - RPS_MIN) / (RPS_MAX - RPS_MIN);
-  return ((30 - 12 * t) * Math.PI) / 180;
+  const base = ((30 - 12 * t) * Math.PI) / 180;
+  const r = activeRound();
+  return base * (r ? r.arcScale : 1);
+}
+
+// the arc does not sit still: the round's seed swings it, so two shifts on two
+// different blocks are two different problems
+function arcCentre() {
+  const r = activeRound();
+  if (!r) return Math.PI;
+  return normalise(Math.PI + LegRound.drift(r, game.running ? game.elapsed : 0));
 }
 
 async function poll() {
+  // One eth_call every poll, even when the API is healthy. It costs nothing, it
+  // seeds the round, and it means the block bar is never a claim taken on trust.
+  const core = await readCore();
+  if (core) chain.core = core;
+
   try {
     const res = await fetch(API, { cache: "no-store" });
     if (!res.ok) throw new Error("http " + res.status);
@@ -151,7 +179,6 @@ async function poll() {
     chain.status = "offline";
     // the telemetry is gone, but the settled work is not: read SqueekCore
     // directly so the block bar keeps telling the truth instead of blanking
-    const core = await readCore();
     if (core) {
       const prevHeight = chain.blockHeight;
       chain.blockHeight = core.blockHeight;
@@ -167,6 +194,27 @@ async function poll() {
     }
     paintChain();
   }
+
+  refreshRound();
+}
+
+// A round is a real block. The seed holds still for that block, so a shift you
+// start twice on the same block is the same shift, and a stranger can check it.
+function refreshRound() {
+  const height = chain.blockHeight || (chain.core ? chain.core.blockHeight : 0);
+  if (!height) return;
+  if (chain.round && chain.round.number === height) return;
+  const round = chain.core ? LegRound.fromState(chain.core, height) : LegRound.fromHeight(height);
+  if (!round) return;
+  chain.round = round;
+  paintRound();
+}
+
+function paintRound() {
+  const r = chain.round;
+  if (!el.roundTag) return;
+  el.roundTag.textContent = r ? "#" + r.number + " · " + r.tag : "no seed";
+  el.roundTag.dataset.round = r ? "seeded" : "none";
 }
 
 // SqueekCore.state() returns eight static words:
@@ -177,6 +225,9 @@ function decodeState(hex) {
   const body = (hex || "").replace(/^0x/, "");
   if (body.length < 64 * 8) return null;
   const word = (i) => BigInt("0x" + body.slice(i * 64, i * 64 + 64));
+  // the same words, left as hex with the padding trimmed, so the round seed can
+  // be rebuilt character for character by anyone reading the contract
+  const rawWord = (i) => body.slice(i * 64, i * 64 + 64).replace(/^0+/, "") || "0";
   return {
     settledThroughRound: Number(word(0)),
     cumulativeWork: Number(word(1)),
@@ -184,6 +235,7 @@ function decodeState(hex) {
     blockProgress: Number(word(4)),
     workPerThousandBlocks: Number(word(5)),
     paused: word(7) !== 0n,
+    raw: { settled: rawWord(0), work: rawWord(1), height: rawWord(3) },
   };
 }
 
@@ -275,6 +327,9 @@ function startShift() {
   game.settlement = 0;
   game.blockAtStart = chain.blockHeight;
   game.modeAtStart = chain.status === "live" ? "live" : "ghost";
+  // the round is frozen here: whatever block is open at START is the block you
+  // played, even if it settles before your torque runs out
+  game.round = chain.round;
   game.elapsed = 0;
   game.tickAngle = 0;
   game.ghost = LegGhost.load();
@@ -303,10 +358,11 @@ function endShift() {
 
   const acc = game.taps ? Math.round((game.perfects / game.taps) * 100) : 0;
   const played = game.modeAtStart === "live" ? "LIVE" : "GHOST";
-  const line = `LEG DAY: ${game.steps} steps, best combo ${game.bestCombo}, ${acc}% cadence, ${played}, block #${game.blockAtStart}`;
+  const tag = game.round ? game.round.tag : "";
+  const line = `LEG DAY: ${game.steps} steps, best combo ${game.bestCombo}, ${acc}% cadence, ${played}, block #${game.blockAtStart}${tag ? " seed " + tag : ""}`;
 
   const shifts = readShifts();
-  shifts.push({ steps: game.steps, combo: game.bestCombo, acc, played, block: game.blockAtStart, at: Date.now() });
+  shifts.push({ steps: game.steps, combo: game.bestCombo, acc, played, block: game.blockAtStart, tag, at: Date.now() });
   shifts.sort((a, b) => b.steps - a.steps);
   const kept = shifts.slice(0, STORE_MAX);
   writeShifts(kept);
@@ -318,6 +374,7 @@ function endShift() {
   el.rAcc.textContent = acc + "%";
   el.rMode.textContent = played;
   el.rBlock.textContent = game.blockAtStart ? "#" + game.blockAtStart : "none";
+  if (el.rRound) el.rRound.textContent = game.round ? game.round.tag : "unseeded";
   el.rPlace.textContent = "#" + Math.min(rank, kept.length) + " of " + kept.length;
   // the shift you just played becomes a ghost, and a ghost travels as a short code
   const mine = LegGhost.close({
@@ -345,6 +402,19 @@ function endShift() {
   el.rNote.textContent = game.modeAtStart === "live"
     ? `Settlement paid ${game.settlement} steps on real blocks.`
     : "Ghost shift: no settlement bonus was paid, because he was not running.";
+  // what the share card will carry, frozen here so a theme flip or a new poll
+  // cannot change the card after the fact
+  lastCard = {
+    steps: game.steps,
+    combo: game.bestCombo,
+    acc,
+    played,
+    block: game.blockAtStart,
+    tag,
+    code,
+    line,
+    url: "legday.evm0x.com",
+  };
   openSheet(el.results);
 }
 
@@ -358,7 +428,8 @@ function tap() {
 
   const half = arcHalfWidth();
   const goodHalf = half + (18 * Math.PI) / 180;
-  let delta = Math.abs(normalise(game.angle - Math.PI));
+  const centre = arcCentre();
+  let delta = Math.abs(normalise(game.angle - centre));
   if (delta > Math.PI) delta = 2 * Math.PI - delta;
 
   if (delta <= half) {
@@ -521,6 +592,9 @@ function draw() {
 
   const half = arcHalfWidth();
   const goodHalf = half + (18 * Math.PI) / 180;
+  // the arc rides the round's drift, so the target you see is the target you are
+  // scored against
+  const centre = arcCentre();
 
   // trail behind the marker, 55 degrees of recent motion
   if (game.running) {
@@ -535,19 +609,19 @@ function draw() {
   // cream wedge behind the power arc, so the target reads as a landing pad
   ctx.beginPath();
   ctx.moveTo(cx, cy);
-  ctx.arc(cx, cy, R * 0.93, Math.PI - half - Math.PI / 2, Math.PI + half - Math.PI / 2);
+  ctx.arc(cx, cy, R * 0.93, centre - half - Math.PI / 2, centre + half - Math.PI / 2);
   ctx.closePath();
   ctx.fillStyle = game.running ? C.pad : C.padIdle;
   ctx.fill();
 
   // good window
-  strokeArc(cx, cy, R * 0.93, Math.PI - goodHalf, Math.PI + goodHalf, C.good, 9);
+  strokeArc(cx, cy, R * 0.93, centre - goodHalf, centre + goodHalf, C.good, 9);
   // power arc
-  strokeArc(cx, cy, R * 0.93, Math.PI - half, Math.PI + half, game.running ? C.arc : C.arcIdle, 9);
+  strokeArc(cx, cy, R * 0.93, centre - half, centre + half, game.running ? C.arc : C.arcIdle, 9);
 
   // power arc ticks
   for (let i = 0; i <= 4; i++) {
-    const a = Math.PI - half + (2 * half * i) / 4;
+    const a = centre - half + (2 * half * i) / 4;
     const p1 = polar(cx, cy, R * 0.80, a);
     const p2 = polar(cx, cy, R * 0.86, a);
     ctx.beginPath();
@@ -687,6 +761,22 @@ document.getElementById("copyBtn").addEventListener("click", async () => {
     document.getElementById("copyBtn").textContent = "LINE SELECTED, COPY IT";
   }
 });
+
+// the card is the only artefact a player can take out of the page: a PNG with
+// the score, the round seed and the ghost code on it
+if (el.cardBtn) {
+  el.cardBtn.addEventListener("click", async () => {
+    if (!lastCard) return;
+    const label = el.cardBtn.textContent;
+    el.cardBtn.disabled = true;
+    el.cardBtn.textContent = "DRAWING…";
+    let ok = false;
+    try { ok = await LegCard.save(lastCard); } catch { ok = false; }
+    el.cardBtn.disabled = false;
+    el.cardBtn.textContent = ok ? "CARD SAVED" : "CARD FAILED";
+    setTimeout(() => { el.cardBtn.textContent = label; }, 1600);
+  });
+}
 
 /* ---------- theme ---------- */
 
