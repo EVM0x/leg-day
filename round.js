@@ -166,7 +166,7 @@ const LegCard = (() => {
       ["CADENCE", s.acc + "%"],
       ["PLAYED", s.played],
       ["BLOCK", s.block ? "#" + s.block : "none"],
-      ["ROUND SEED", s.tag ? s.tag + " / block hash" : "no seed"],
+      ["ROUND SEED", s.tag ? s.tag + " / from block #" + (s.block || "?") : "no seed"],
     ];
     x.font = '400 21px "JetBrains Mono", ui-monospace, monospace';
     rows.forEach(([k, v], i) => {
