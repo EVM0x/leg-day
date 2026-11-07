@@ -1,85 +1,67 @@
+/* SQUEEK LEG DAY.
+
+   The room is a workshop bench, not a dashboard. Paper is a chalk green, ink is
+   green-black, and there is one accent: machine green, spent only on the work
+   that has actually been packed and on the one button that commits it.
+
+   Motif: the measuring rule and the stamp. The round is a steel rule with ten
+   marks, one per thousand work units. Every number on the page sits under a
+   thin rule, never in a floating card. */
+
 :root {
   --bg: #e9ece2;
   --raised: #dfe3d7;
+  --plate: #f2f4ec;
   --ink: #191c17;
   --line: #ccd2c2;
+  --rule-line: #b9c1ad;
   --dim: #565c50;
   --faint: #5d6456;
   --accent: #1c6b45;
   --accent-lit: #227a4f;
   --pad: #d8e8bd;
   --gold: #6f5209;
-  --green: #1c6b45;
   --red: #a3301f;
   --live-bg: #dfeede;
   --ghost-bg: #f2ecd7;
   --offline-bg: #f4e4df;
+  --hatch: rgba(28, 107, 69, 0.16);
+  --shadow: 0 1px 0 rgba(25, 28, 23, 0.06);
   --display: "Big Shoulders Display", "Arial Narrow", sans-serif;
   --data: "JetBrains Mono", ui-monospace, monospace;
   --voice: "Work Sans", system-ui, sans-serif;
-
-  /* the wheel is drawn on a canvas, so it needs its own tokens */
-  --wheel-rim: #ccd2c2;
-  --wheel-guide: #d5dac9;
-  --wheel-trail: rgba(28, 107, 69, 0.22);
-  --wheel-pad: #d8e8bd;
-  --wheel-pad-idle: #dfe3d7;
-  --wheel-good: #c2dda0;
-  --wheel-arc: #1c6b45;
-  --wheel-arc-idle: #c2c9b6;
-  --wheel-tick: #c2c9b6;
-  --wheel-spoke: #dde1d5;
-  --wheel-hub: #e9ece2;
-  --wheel-hub-line: #ccd2c2;
-  --wheel-marker: #191c17;
-  --wheel-marker-idle: #a9b0a2;
-  --wheel-label: #191c17;
-  --wheel-sublabel: #565c50;
 }
 
-/* Night shift. Same room after dark: paper goes to blue-black, the one accent
-   stays blue, the landing pad stays warm. Every value keeps WCAG AA on its own
-   background, which is why the accent is lighter here than in daylight. */
+/* Night shift. Same bench after dark: the paper goes blue-black, the accent goes
+   lighter so it still clears AA on the dark plate. */
 :root[data-theme="dark"] {
   --bg: #131713;
   --raised: #1d221c;
+  --plate: #191e18;
   --ink: #eef0e8;
   --line: #2b322a;
+  --rule-line: #3a4238;
   --dim: #a5ada0;
   --faint: #949d90;
   --accent: #86dc9e;
   --accent-lit: #9ce8b2;
   --pad: #26301c;
   --gold: #e6c76a;
-  --green: #86dc9e;
   --red: #ff9d8c;
   --live-bg: #162a1c;
   --ghost-bg: #2c2712;
   --offline-bg: #301a16;
-
-  --wheel-rim: #2b322a;
-  --wheel-guide: #232a23;
-  --wheel-trail: rgba(134, 220, 158, 0.24);
-  --wheel-pad: #26301c;
-  --wheel-pad-idle: #1d221c;
-  --wheel-good: #35492a;
-  --wheel-arc: #86dc9e;
-  --wheel-arc-idle: #3a4438;
-  --wheel-tick: #3a4438;
-  --wheel-spoke: #202620;
-  --wheel-hub: #131713;
-  --wheel-hub-line: #2b322a;
-  --wheel-marker: #eef0e8;
-  --wheel-marker-idle: #6d776b;
-  --wheel-label: #eef0e8;
-  --wheel-sublabel: #a5ada0;
+  --hatch: rgba(134, 220, 158, 0.18);
+  --shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
 }
 
 * { box-sizing: border-box; }
 
+[hidden] { display: none !important; }
+
 html, body {
   margin: 0;
-  height: 100%;
+  min-height: 100%;
   background: var(--bg);
   color: var(--ink);
   font-family: var(--data);
@@ -89,301 +71,402 @@ html, body {
 body {
   overscroll-behavior: none;
   touch-action: manipulation;
+  overflow-x: hidden;
+}
+
+button { font-family: inherit; }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .stage {
-  height: 100dvh;
-  display: grid;
-  grid-template-rows: auto 1fr auto;
-  padding: clamp(10px, 2.4vh, 22px) clamp(12px, 3.4vw, 32px);
-  gap: clamp(6px, 1.6vh, 16px);
-  max-width: 1180px;
+  min-height: 100dvh;
+  max-width: 1080px;
   margin: 0 auto;
+  padding: clamp(8px, 2vh, 20px) clamp(12px, 3.2vw, 30px);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: clamp(6px, 1.4vh, 14px);
 }
+
+/* ---------- head ---------- */
 
 .hud {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
-  border-bottom: 1px solid var(--line);
-  padding-bottom: clamp(6px, 1.2vh, 12px);
-  /* the two words in the wordmark made the left block wider, and on a tablet
-     that was enough to push the control row past the edge of the screen. The
-     row is allowed to wrap rather than overflow. */
+  gap: 10px 16px;
   flex-wrap: wrap;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: clamp(5px, 1vh, 10px);
 }
+
+.hud__left { min-width: 0; }
 
 .wordmark {
+  margin: 0;
   font-family: var(--display);
   font-weight: 800;
-  /* 12 characters now instead of 6, so the ceiling comes down a step. It still
-     fills the same visual weight because the letters are wider than they are
-     tall in this face. */
-  font-size: clamp(24px, 4.6vw, 38px);
-  letter-spacing: 0.02em;
-  line-height: 0.9;
-  margin: 0;
-  text-transform: uppercase;
+  font-size: clamp(20px, 3.6vw, 30px);
+  line-height: 0.92;
+  letter-spacing: 0.01em;
 }
 
-.wordmark span { color: var(--accent); letter-spacing: 0.04em; }
+.wordmark span {
+  color: var(--accent);
+  margin-left: 0.14em;
+}
 
 .tagline {
-  margin: 4px 0 0;
+  margin: 2px 0 0;
   font-family: var(--voice);
-  font-size: clamp(11px, 2.4vw, 14px);
+  font-size: clamp(10px, 1.4vw, 12px);
   color: var(--dim);
 }
 
 .hud__right {
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
+  gap: 5px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .chip {
-  font-family: var(--data);
-  font-size: 10px;
+  font-size: 9px;
   letter-spacing: 0.14em;
-  text-transform: uppercase;
-  padding: 5px 9px;
+  padding: 4px 7px;
   border: 1px solid var(--line);
-  background: var(--raised);
   color: var(--dim);
   white-space: nowrap;
 }
 
-.chip[data-mode="live"] {
-  border-color: var(--green);
-  color: var(--green);
-  background: var(--live-bg);
-}
-
-.chip[data-mode="live"]::before {
-  content: "";
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  margin-right: 6px;
-  border-radius: 50%;
-  background: var(--green);
-  animation: pulse 1.6s ease-in-out infinite;
-}
-
-.chip[data-mode="ghost"] { border-color: var(--gold); color: var(--gold); background: var(--ghost-bg); }
-.chip[data-mode="offline"] { border-color: var(--red); color: var(--red); background: var(--offline-bg); }
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.25; }
-}
+.chip[data-mode="live"] { background: var(--live-bg); border-color: var(--accent); color: var(--accent); }
+.chip[data-mode="ghost"] { background: var(--ghost-bg); border-color: var(--gold); color: var(--gold); }
+.chip[data-mode="offline"] { background: var(--offline-bg); border-color: var(--red); color: var(--red); }
+.chip--holder { border-color: var(--accent); color: var(--accent); }
 
 .ghostbtn {
-  font-family: var(--data);
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  appearance: none;
   background: transparent;
-  color: var(--dim);
   border: 1px solid var(--line);
-  padding: 8px 11px;
+  color: var(--dim);
+  font-size: 9px;
+  letter-spacing: 0.13em;
+  padding: 5px 8px;
+  min-height: 30px;
   cursor: pointer;
   white-space: nowrap;
-  transition: color 0.15s, border-color 0.15s, background-color 0.15s;
+  transition: color 0.14s ease, border-color 0.14s ease, background 0.14s ease;
 }
 
-.ghostbtn:hover { color: var(--ink); border-color: var(--faint); }
-.ghostbtn[aria-pressed="true"] { color: var(--ink); border-color: var(--faint); background: var(--raised); }
-@media (pointer: coarse) { .ghostbtn, .primary { min-height: 44px; } }
-.ghostbtn:active { background: var(--raised); border-color: var(--dim); }
-.ghostbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ghostbtn:hover { color: var(--ink); border-color: var(--ink); }
+.ghostbtn[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
+.ghostbtn--wide { min-height: 44px; padding: 0 16px; font-size: 10px; }
+.ghostbtn--quiet { border-style: dashed; }
+.ghostbtn:disabled { cursor: not-allowed; opacity: 0.5; }
+
+/* A phone has no space bar. Showing one is a promise the device cannot keep. */
+@media (hover: none) and (pointer: coarse) {
+  kbd { display: none; }
+}
+
+kbd {
+  font-family: var(--data);
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  border: 1px solid currentColor;
+  padding: 1px 3px;
+  margin-left: 6px;
+  opacity: 0.7;
+}
+
+/* ---------- board ---------- */
 
 .board {
-  position: relative;
-  display: grid;
-  grid-template-columns: 1fr minmax(150px, 210px);
-  grid-template-rows: 1fr auto;
-  gap: clamp(8px, 1.6vw, 22px);
-  min-height: 0;
-  align-items: center;
-}
-
-/* the dial is the wheel plus its START control, so the button can sit in the
-   middle of the rim without being part of the tap surface */
-.dial {
-  grid-row: 1;
-  grid-column: 1;
-  position: relative;
-  display: grid;
-  place-items: center;
-  /* an explicit height so the canvas can resolve height:100%; without it the
-     canvas falls back to its intrinsic 300x150 and the wheel shrinks */
-  height: 100%;
-  width: 100%;
-  min-height: 0;
-  min-width: 0;
-}
-
-#wheel {
-  grid-row: 1;
-  grid-column: 1;
-  justify-self: center;
-  align-self: center;
-  width: auto;
-  height: 100%;
-  max-width: 100%;
-  aspect-ratio: 1 / 1;
-  min-height: 0;
-  display: block;
-  cursor: pointer;
-  touch-action: none;
-  border-radius: 50%;
-}
-
-#wheel:focus-visible { outline: 2px solid var(--accent); outline-offset: 6px; }
-
-/* The only way a shift starts. The wheel used to start one on any tap, which
-   meant tapping a control in the HUD first could land on the board instead. */
-.dial__start {
-  position: absolute;
-  grid-row: 1;
-  grid-column: 1;
-  place-self: center;
-  z-index: 2;
-  display: grid;
-  gap: 1px;
-  justify-items: center;
-  align-content: center;
-  width: clamp(96px, 30%, 132px);
-  aspect-ratio: 1 / 1;
-  padding: 0;
-  border: 1px solid var(--ink);
-  border-radius: 50%;
-  background: var(--bg);
-  color: var(--ink);
-  cursor: pointer;
-  transition: background-color 0.14s, color 0.14s, transform 0.1s;
-}
-
-.dial__start-label {
-  font-family: var(--display);
-  font-size: clamp(15px, 3.4vw, 19px);
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  line-height: 1;
-}
-
-.dial__start-sub {
-  font-family: var(--data);
-  font-size: 9px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--dim);
-}
-
-.dial__start:hover { background: var(--ink); color: var(--bg); border-color: var(--ink); }
-.dial__start:hover .dial__start-sub { color: var(--pad); }
-.dial__start:active { transform: scale(0.97); }
-.dial__start:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
-.dial__start[hidden] { display: none; }
-
-@media (pointer: coarse) { .dial__start { min-width: 96px; min-height: 96px; } }
-
-.readout {
-  grid-row: 2;
-  grid-column: 1;
   display: flex;
-  gap: clamp(10px, 3vw, 28px);
-  align-items: flex-end;
-  border-top: 1px solid var(--line);
-  padding-top: 10px;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(8px, 1.6vh, 18px);
+  min-height: 0;
 }
-
-.readout__cell { display: flex; flex-direction: column; gap: 2px; }
-.readout__cell--wide { flex: 1; min-width: 90px; }
 
 .k {
-  font-size: 10px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--dim);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  color: var(--faint);
 }
 
-.v {
+/* the rule: the round's capacity, measured */
+
+.rule__head {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.rule__cell { display: flex; align-items: baseline; gap: 6px; }
+.rule__cell--right { margin-left: auto; }
+
+.rule__cell .v {
   font-family: var(--display);
-  font-size: clamp(22px, 5vw, 34px);
   font-weight: 600;
+  font-size: clamp(15px, 2.4vw, 20px);
+  letter-spacing: 0.02em;
+}
+
+.rule__track {
+  position: relative;
+  height: clamp(34px, 7vh, 56px);
+  border: 1px solid var(--rule-line);
+  background: var(--raised);
+  overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+:root[data-theme="dark"] .rule__track { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04); }
+
+.rule__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
+  background:
+    repeating-linear-gradient(90deg, var(--hatch) 0 1px, transparent 1px 7px),
+    var(--accent);
+  transition: width 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* the burst you are about to take, shown as a pale extension of the fill so the
+   decision is made with the eye as well as the arithmetic */
+.rule__ghost {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: var(--pad);
+  border-left: 1px dashed var(--accent);
+  transition: width 0.12s linear, left 0.12s linear;
+}
+
+.rule__marks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(90deg, var(--rule-line) 0 1px, transparent 1px 10%);
+  opacity: 0.85;
+}
+
+.rule__foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 5px;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--faint);
+  text-transform: uppercase;
+}
+
+.rule__scale { font-variant-numeric: tabular-nums; }
+
+/* the chute: one burst, and the time it is still here */
+
+/* The chute takes the height the viewport has left over and centres its number
+   in it, so a tall screen has one focal point instead of a void between the rule
+   and the readout. */
+.chute {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border: 1px solid var(--line);
+  background: var(--plate);
+  padding: clamp(8px, 1.8vh, 16px) clamp(12px, 2.4vw, 20px) clamp(10px, 2vh, 18px);
+  text-align: center;
+  box-shadow: var(--shadow);
+  min-height: clamp(126px, 24vh, 214px);
+}
+
+.chute__label { margin: 0; display: flex; justify-content: center; gap: 6px; align-items: baseline; }
+.chute__label b { font-size: 10px; letter-spacing: 0.1em; color: var(--dim); }
+
+.chute__value {
+  margin: 2px 0 0;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(38px, 11vh, 76px);
   line-height: 1;
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 
-.bar {
-  height: 10px;
-  background: var(--raised);
-  border: 1px solid var(--line);
-  overflow: hidden;
+.chute__unit {
+  margin: 4px 0 0;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: var(--faint);
 }
 
-.bar i {
+.chute__timer {
+  height: 2px;
+  margin: 8px auto 0;
+  max-width: 320px;
+  background: var(--line);
+}
+
+.chute__timer i {
   display: block;
   height: 100%;
   width: 100%;
   background: var(--accent);
   transform-origin: left center;
-  transition: transform 0.12s linear, background-color 0.2s;
 }
 
-.bar--thin { height: 6px; }
-
-.live {
-  grid-row: 1 / span 2;
-  grid-column: 2;
-  align-self: center;
-  display: grid;
-  gap: clamp(8px, 1.8vh, 16px);
-  border-left: 1px solid var(--line);
-  padding-left: clamp(10px, 2vw, 20px);
+.chute__hint,
+.chute__next {
+  margin: 7px 0 0;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--dim);
+  min-height: 14px;
 }
 
-.live__row { display: grid; gap: 3px; min-width: 0; }
-.live__row .v { font-size: clamp(14px, 3vw, 18px); font-family: var(--data); font-weight: 400; overflow-wrap: anywhere; }
+.chute__next { color: var(--accent); }
+
+.chute[data-fit="over"] .chute__value { color: var(--red); }
+.chute[data-fit="over"] .chute__hint { color: var(--red); }
+
+/* acts */
+
+.acts {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.primary {
+  appearance: none;
+  flex: 1 1 180px;
+  min-height: 46px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  /* white, not paper: paper on machine green lands at 4.43, just under AA */
+  color: #f7faf4;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  cursor: pointer;
+  transition: background 0.14s ease, transform 0.08s ease;
+}
+
+:root[data-theme="dark"] .primary { color: #10240f; }
+
+.primary:hover { background: var(--accent-lit); border-color: var(--accent-lit); }
+.primary:active { transform: translateY(1px); }
+.primary[data-fit="over"] { background: transparent; color: var(--red); border-color: var(--red); }
+.primary:disabled { cursor: not-allowed; opacity: 0.55; }
+
+.acts .ghostbtn { flex: 0 1 auto; }
+
+/* flash line: one line, one state, never a toast stack */
 
 .flash {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 4%;
-  text-align: center;
   margin: 0;
-  font-family: var(--display);
-  font-size: clamp(16px, 3.6vw, 24px);
-  letter-spacing: 0.06em;
+  min-height: 15px;
+  font-size: 10px;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--accent);
-  opacity: 0;
-  transition: opacity 0.25s;
-  pointer-events: none;
+  color: var(--dim);
+  text-align: center;
 }
 
-.flash[data-tone="good"] { color: var(--gold); opacity: 1; }
-.flash[data-tone="bad"] { color: var(--red); opacity: 1; }
-.flash[data-tone="pay"] { color: var(--green); opacity: 1; }
+.flash[data-tone="good"] { color: var(--accent); }
+.flash[data-tone="bad"] { color: var(--red); }
+.flash[data-tone="gold"] { color: var(--gold); }
+
+/* the settle: what the round was worth */
+
+.settle {
+  border: 1px solid var(--accent);
+  background: var(--plate);
+  padding: clamp(10px, 2vh, 16px) clamp(12px, 2.4vw, 20px);
+}
+
+.settle__bar { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+
+.settle__title {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(18px, 3.2vw, 26px);
+  letter-spacing: 0.02em;
+}
+
+.settle__sub { margin: 0; font-size: 10px; letter-spacing: 0.1em; color: var(--dim); }
+
+.settle__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 10px 0 12px;
+}
+
+.settle__grid div { border-top: 1px solid var(--line); padding-top: 5px; min-width: 0; }
+.settle__grid dt { font-size: 8px; letter-spacing: 0.14em; color: var(--faint); text-transform: uppercase; }
+.settle__grid dd {
+  margin: 3px 0 0;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: clamp(14px, 2.4vw, 19px);
+  overflow-wrap: anywhere;
+}
+
+/* readout strip: four numbers under thin rules, never cards */
+
+.readout {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px 14px;
+  margin: 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.readout__cell { min-width: 0; border-top: 1px solid var(--line); padding-top: 5px; }
+.readout dt { margin: 0; }
+.readout dd {
+  margin: 3px 0 0;
+  font-size: clamp(11px, 1.8vw, 14px);
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.readout dd.v--big {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(22px, 4.4vw, 34px);
+  line-height: 1;
+  color: var(--accent);
+}
+
+.readout dd[data-round="seeded"] { color: var(--accent); }
+
+/* ---------- foot ---------- */
 
 .foot {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  gap: 12px;
-  border-top: 1px solid var(--line);
-  padding-top: 8px;
-  font-size: 11px;
-  color: var(--faint);
-  letter-spacing: 0.02em;
-  /* the credit joined the footer, so the row has to be able to give way on a
-     narrow phone rather than push the note off the edge */
+  gap: 8px 14px;
   flex-wrap: wrap;
+  border-top: 1px solid var(--line);
+  padding-top: clamp(5px, 1vh, 10px);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  color: var(--faint);
 }
 
 .foot p { margin: 0; }
@@ -394,14 +477,11 @@ body {
   justify-content: flex-end;
   gap: 10px;
   flex-wrap: wrap;
-  /* the note and the mark travel together in the right hand corner, on a wide
-     screen on one line and on a phone as two right-aligned lines */
   margin-left: auto;
 }
 
-/* The maker's mark. It sits in the bottom right corner of every page so a
-   screenshot of the arcade always carries where it came from, and it is a
-   link so the claim can be checked rather than taken on trust. */
+/* The maker's mark: a screenshot of the arcade carries where it came from, and
+   it is a link so the claim can be checked rather than taken on trust. */
 .foot__mark {
   font-family: var(--data);
   font-size: 10px;
@@ -412,333 +492,248 @@ body {
   padding: 4px 8px;
   text-decoration: none;
   white-space: nowrap;
-  /* when the note fills the row and the mark drops to a line of its own, this
-     keeps it in the corner it belongs in instead of starting at the margin */
   margin-left: auto;
   transition: color 0.15s ease, border-color 0.15s ease;
 }
 
 .foot__mark:hover,
-.foot__mark:focus-visible {
-  color: var(--ink);
-  border-color: var(--ink);
-}
+.foot__mark:focus-visible { color: var(--ink); border-color: var(--ink); }
+
+/* ---------- state machine ---------- */
+
+.board[data-state="idle"] .readout dd.v--big { color: var(--faint); }
+.board[data-state="play"] .settle { display: none; }
+
+/* Once a round is settled the chute is history: it stays in place so the eye
+   does not lose the board, but it steps back and its clock stops. */
+.board[data-state="settle"] .chute { opacity: 0.5; }
+.board[data-state="settle"] .chute__timer { visibility: hidden; }
+
+/* A clock that is not counting is a lie: the bar only exists while a burst does. */
+.board[data-state="idle"] .chute__timer,
+.board[data-state="over"] .chute__timer { visibility: hidden; }
+
+/* ---------- sheets ---------- */
 
 .sheet {
   position: fixed;
   inset: 0;
-  background: rgba(19, 23, 19, 0.46);
+  z-index: 20;
   display: grid;
   place-items: center;
-  padding: 16px;
-  z-index: 10;
-  overflow-y: auto;
+  padding: clamp(10px, 3vw, 28px);
+  background: color-mix(in srgb, var(--ink) 58%, transparent);
 }
 
 .sheet[hidden] { display: none; }
 
 .sheet__card {
+  width: min(560px, 100%);
+  max-height: min(88dvh, 760px);
+  overflow-y: auto;
   background: var(--bg);
   border: 1px solid var(--line);
-  padding: clamp(18px, 4vw, 32px);
-  width: min(420px, 100%);
-  max-height: 88dvh;
-  overflow-y: auto;
+  padding: clamp(14px, 2.4vw, 24px);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
 }
 
-.sheet__card--wide { width: min(640px, 100%); }
+.sheet__card--wide { width: min(720px, 100%); }
 
-/* The card scrolls internally, so the only way out used to be a button at the
-   very bottom of a long page, or a tap on the dimmed backdrop. The heading row
-   is sticky instead, which keeps one close control on screen at all times. */
 .sheet__bar {
-  position: sticky;
-  top: 0;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  margin: calc(clamp(18px, 4vw, 32px) * -1) calc(clamp(18px, 4vw, 32px) * -1) 12px;
-  padding: clamp(18px, 4vw, 32px) clamp(18px, 4vw, 32px) 6px;
-  background: var(--bg);
-  z-index: 1;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 8px;
+  margin-bottom: 12px;
 }
 
-.sheet__card .sheet__bar h2 { margin: 0; }
+.sheet__bar h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(20px, 3.4vw, 28px);
+  letter-spacing: 0.02em;
+}
 
 .sheet__close {
-  flex: none;
-  width: 40px;
-  height: 40px;
-  margin-top: -4px;
-  display: grid;
-  place-items: center;
+  appearance: none;
+  background: transparent;
   border: 1px solid var(--line);
-  background: var(--bg);
-  color: var(--ink);
-  font-family: var(--data);
-  font-size: 19px;
+  color: var(--dim);
+  width: 30px;
+  height: 30px;
+  font-size: 17px;
   line-height: 1;
   cursor: pointer;
-  transition: background-color 0.14s, color 0.14s;
+  flex: none;
 }
 
-.sheet__close:hover { background: var(--ink); color: var(--bg); }
-.sheet__close:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sheet__close:hover { color: var(--ink); border-color: var(--ink); }
 
-.sheet__card h2 {
-  font-family: var(--display);
-  font-size: clamp(24px, 5vw, 34px);
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  margin: 0 0 14px;
+.sheet__lead {
+  margin: 0 0 12px;
+  font-family: var(--voice);
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink);
 }
-
-.sheet__lead { font-family: var(--voice); font-size: 14px; line-height: 1.5; color: var(--ink); margin: 0 0 16px; }
 
 .sheet__grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px 18px;
-  margin: 0 0 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 16px;
+  margin: 0 0 12px;
 }
 
-.sheet__grid dt { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
-.sheet__grid dd { margin: 2px 0 0; font-family: var(--display); font-size: 24px; font-weight: 600; }
-
-.sheet__line {
-  font-size: 11px;
-  line-height: 1.5;
-  color: var(--dim);
-  background: var(--raised);
-  border: 1px solid var(--line);
-  padding: 10px;
-  margin: 0 0 14px;
-  word-break: break-word;
-  user-select: all;
-}
-
-.sheet__actions { display: flex; gap: 8px; flex-wrap: wrap; }
-
-.primary {
-  font-family: var(--data);
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  background: var(--ink);
-  color: var(--bg);
-  border: 1px solid var(--ink);
-  padding: 12px 16px;
-  cursor: pointer;
-  transition: background-color 0.15s, border-color 0.15s;
-}
-
-.primary:hover { background: var(--accent); border-color: var(--accent); }
-.primary:active { background: #134a2e; border-color: #134a2e; }
-.primary:focus-visible, .ghostbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-
-.sheet__note { font-size: 11px; color: var(--faint); margin: 14px 0 0; line-height: 1.5; }
-
-.steps { margin: 0 0 18px; padding-left: 18px; display: grid; gap: 9px; }
-.steps li { font-family: var(--voice); font-size: 13px; line-height: 1.45; }
-.steps strong { font-family: var(--data); font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; }
-
-.fields { width: 100%; border-collapse: collapse; margin: 0 0 4px; font-size: 11px; }
-.fields caption { text-align: left; color: var(--dim); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; padding-bottom: 6px; }
-.fields td { border-top: 1px solid var(--line); padding: 6px 4px; vertical-align: top; color: var(--dim); }
-.fields td:first-child { white-space: nowrap; padding-right: 12px; }
-.fields code { font-family: var(--data); color: var(--ink); font-size: 11px; }
-
-@media (max-width: 620px) {
-  .board {
-    grid-template-columns: 1fr;
-    grid-template-rows: 1fr auto auto;
-  }
-
-  /* the ghost gap is a comparison, so it gets the full width on a phone */
-  .live__row:first-child { grid-column: 1 / -1; }
-
-  .live {
-    grid-row: 3;
-    grid-column: 1;
-    grid-template-columns: 1fr 1fr;
-    border-left: 0;
-    border-top: 1px solid var(--line);
-    padding-left: 0;
-    padding-top: 8px;
-    gap: 8px 14px;
-  }
-
-  .live__row--fill { grid-column: 1 / -1; }
-  .flash { top: 6%; }
-  .foot__note { display: none; }
-  .hud { flex-wrap: wrap; }
-  /* four controls no longer fit one row on a 390px phone, so they wrap here
-     instead of pushing the board wider than the screen */
-  .hud__right { flex-wrap: wrap; flex-shrink: 1; min-width: 0; justify-content: flex-start; gap: 6px; }
-  .ghostbtn, .primary { min-height: 44px; }
-
-  .fields, .fields tbody, .fields tr, .fields td { display: block; }
-  .fields td { border-top: 0; padding: 0; }
-  .fields td:first-child { white-space: normal; padding-right: 0; }
-  .fields tr { border-top: 1px solid var(--line); padding: 7px 0; }
-}
-
-/* 320-380px: the three HUD controls are nowrap and mono, so they add up wider
-   than the screen. Let them stack instead of dragging the whole grid sideways. */
-@media (max-width: 380px) {
-  .hud { gap: 8px; }
-  .hud__right { flex-wrap: wrap; flex-shrink: 1; justify-content: flex-start; gap: 6px; }
-  .ghostbtn { padding: 7px 9px; letter-spacing: 0.08em; }
-  .readout { gap: 10px; }
-  .v { font-size: clamp(20px, 5vw, 28px); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .chip[data-mode="live"]::before { animation: none; }
-  .bar i { transition: none; }
-  .flash { transition: none; }
-  .ghostbtn, .primary { transition: none; }
-}
-
-/* ---------- the ghost race ---------- */
-
-.ghostbox {
-  display: grid;
-  gap: 8px;
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px solid var(--line);
-}
-
-.ghostbox__code {
-  margin: 0;
-  max-height: 4.6em;
-  overflow: auto;
-  font-family: var(--data);
-  font-size: 11px;
-  line-height: 1.45;
-  color: var(--faint);
+.sheet__grid div { border-top: 1px solid var(--line); padding-top: 5px; min-width: 0; }
+.sheet__grid dt { font-size: 8px; letter-spacing: 0.14em; color: var(--faint); text-transform: uppercase; }
+.sheet__grid dd {
+  margin: 3px 0 0;
+  font-size: clamp(12px, 1.8vw, 14px);
+  font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
 
-.ghostbox__row { display: flex; gap: 8px; }
-
-.ghostbox__input {
-  flex: 1;
-  min-width: 0;
-  padding: 9px 10px;
-  font-family: var(--data);
-  font-size: 12px;
-  color: var(--ink);
-  background: var(--raised);
-  border: 1px solid var(--line);
-  border-radius: 0;
-}
-
-.ghostbox__input::placeholder { color: var(--dim); }
-.ghostbox__input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-
-.sheet__card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-
-@media (max-width: 620px) {
-  /* 16px keeps iOS from zooming the page when the ghost field is focused,
-     which would push the fixed-height board out of the viewport */
-  .ghostbox__input { min-height: 44px; font-size: 16px; }
-}
-
-/* Short phones (SE, 320x568, 360x640 in a browser with chrome) do not have the
-   vertical room for a 150px header and a five-row telemetry panel: the wheel
-   was squeezed to 114px, which is not playable. Everything above the wheel
-   gets tighter and the panel goes to three columns. */
-@media (max-width: 620px) and (max-height: 740px) {
-  .tagline { display: none; }
-  .wordmark { font-size: clamp(20px, 5.2vw, 28px); }
-  .hud { padding-bottom: 4px; gap: 6px; }
-  .hud__right { gap: 4px; }
-  .ghostbtn { min-height: 34px; padding: 4px 8px; font-size: 9px; letter-spacing: 0.08em; }
-  .chip { padding: 3px 7px; font-size: 9px; }
-
-  .readout { padding-top: 6px; gap: 10px; }
-  .readout .v { font-size: clamp(17px, 4.6vw, 22px); }
-  .bar { height: 7px; }
-  .bar--thin { height: 4px; }
-
-  .live { grid-template-columns: repeat(3, 1fr); gap: 4px 10px; padding-top: 5px; }
-  .live__row { gap: 1px; }
-  .live__row .v { font-size: 11px; }
-  .live__row:first-child { grid-column: auto; }
-  /* the bar needs the width to read, so it takes two of the three columns */
-  .live__row--fill { grid-column: span 2; }
-
-  .flash { top: 2%; font-size: clamp(13px, 3vw, 17px); }
-}
-
-/* ---------- holder shift ---------- */
-
-.chip--holder {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: var(--pad);
-  font-weight: 600;
-}
-
-.holdbox {
-  display: grid;
-  /* minmax(0,1fr), not 1fr: an input has a wide min-content width, and a plain
-     1fr column will not shrink below it, which pushes the CHECK button off a
-     320px screen */
-  grid-template-columns: minmax(0, 1fr);
-  gap: 8px;
-  margin: 14px 0 4px;
-  padding-top: 12px;
-  border-top: 1px solid var(--line);
-}
-
-.holdbox .k {
-  font-family: var(--data);
-  font-size: 10px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--dim);
-}
-
-.holdbox__status {
-  margin: 0;
-  font-family: var(--data);
+.sheet__line {
+  margin: 0 0 12px;
+  font-family: var(--voice);
   font-size: 12px;
   line-height: 1.5;
   color: var(--dim);
-  min-height: 2.6em;
 }
 
-.holdbox__status[data-tier="light"],
-.holdbox__status[data-tier="heavy"],
-.holdbox__status[data-tier="prime"] {
+.sheet__actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.sheet__actions .primary { flex: 1 1 160px; }
+
+.sheet__note {
+  margin: 12px 0 0;
+  font-family: var(--voice);
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--dim);
+}
+
+.sheet__note code { font-family: var(--data); font-size: 10px; color: var(--ink); }
+
+.steps {
+  margin: 0 0 12px;
+  padding-left: 18px;
+  font-family: var(--voice);
+  font-size: 12px;
+  line-height: 1.6;
   color: var(--ink);
 }
 
-.holdbox__status[data-tier="error"] { color: var(--red); }
+.steps li { margin-bottom: 7px; }
+.steps strong { font-weight: 600; }
 
-.ghostbtn--quiet {
-  justify-self: start;
+.fields {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 10px;
+  font-size: 10px;
+}
+
+.fields caption {
+  text-align: left;
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--faint);
+  padding-bottom: 5px;
+}
+
+.fields td {
+  border-top: 1px solid var(--line);
+  padding: 5px 8px 5px 0;
+  vertical-align: top;
+  line-height: 1.45;
   color: var(--dim);
-  border-color: transparent;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  padding: 6px 0;
 }
 
-.ghostbtn--quiet:hover { color: var(--ink); border-color: transparent; }
+.fields td:first-child { white-space: nowrap; color: var(--ink); }
+.fields code { font-family: var(--data); font-size: 10px; }
 
-/* the HUD grew a fourth control, so the whole strip has to be allowed to wrap
-   before it drags the board sideways */
+.holdbox { margin-bottom: 12px; }
+.holdbox .k { display: block; margin-bottom: 5px; }
+
+.ghostbox__row { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.ghostbox__input {
+  flex: 1 1 160px;
+  min-height: 36px;
+  padding: 0 10px;
+  background: var(--plate);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-family: var(--data);
+  font-size: 12px;
+}
+
+.ghostbox__input::placeholder { color: var(--faint); }
+
+.holdbox__status {
+  margin: 8px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--dim);
+}
+
+.holdbox__status[data-tone="good"] { color: var(--accent); }
+.holdbox__status[data-tone="bad"] { color: var(--red); }
+
+/* ---------- small screens ---------- */
+
 @media (max-width: 720px) {
-  .hud__right { flex-wrap: wrap; justify-content: flex-end; }
+  .tagline { display: none; }
+  .hud__right { width: 100%; justify-content: flex-start; }
+  .readout { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .settle__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-@media (max-width: 420px) {
-  .hud__right { gap: 5px; }
-  .chip--holder { order: 2; }
+/* A phone in portrait is the screen this game is actually played on, so it gets
+   its own type scale rather than a squeezed desktop one. */
+@media (max-width: 400px) {
+  .stage { padding: 6px 10px; gap: 5px; }
+  .hud { gap: 4px 8px; padding-bottom: 4px; }
+  .wordmark { font-size: 19px; }
+  .hud__right { gap: 4px; }
+  .ghostbtn { font-size: 8px; letter-spacing: 0.07em; padding: 4px 6px; min-height: 26px; }
+  .chip { font-size: 8px; padding: 3px 5px; letter-spacing: 0.1em; }
+  .board { gap: 6px; }
+  .rule__head { gap: 8px; margin-bottom: 4px; }
+  .rule__cell .v { font-size: 14px; }
+  .rule__track { height: 26px; }
+  .rule__scale { display: none; }
+  .rule__foot { font-size: 8px; }
+  .chute { min-height: 96px; padding: 6px 10px 8px; }
+  .chute__value { font-size: 40px; }
+  .chute__hint, .chute__next { font-size: 9px; margin-top: 4px; }
+  .chute__unit { font-size: 8px; }
+  .primary { min-height: 42px; font-size: 10px; flex: 1 1 auto; }
+  .ghostbtn--wide { min-height: 40px; font-size: 9px; padding: 0 12px; }
+  .readout { gap: 5px 10px; padding-top: 5px; }
+  .readout dd { font-size: 10px; }
+  .readout dd.v--big { font-size: 20px; }
+  .foot { font-size: 8px; gap: 4px 8px; }
+  .foot__note { display: none; }
+  .foot__mark { font-size: 9px; padding: 3px 6px; }
 }
 
+@media (max-height: 620px) {
+  .stage { padding-top: 6px; padding-bottom: 6px; gap: 5px; }
+  .board { gap: 6px; }
+  .chute { min-height: 96px; }
+  .chute__value { font-size: clamp(30px, 8.5vh, 46px); }
+  .chute__timer { margin-top: 5px; }
+  .chute__hint, .chute__next { margin-top: 4px; }
+  .rule__track { height: 30px; }
+  .tagline { display: none; }
+  .foot { padding-top: 3px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}

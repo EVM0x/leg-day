@@ -1,138 +1,84 @@
 # DESIGN.md
 
 Direction for Squeek Leg Day. This file records the direction the build already follows, so
-the rules in `antislop.md` have something to filter against. If any line here does not
-match what you want, change it here first and the build follows.
+the rules in `antislop.md` have something to filter against. If any line here does not match
+what you want, change it here first and the build follows.
 
 ## What this is
 
-An arcade cabinet that happens to be a web page. You are Squeektoshi's legs: the wheel
-turns at the cadence the chain publishes, and you tap the power arc to keep the shift
-alive. One screen, no scroll, no wallet.
+An instrument, not a dashboard. Squeektoshi's wheel produces work one pass at a time, and
+work is counted in rounds of ten minutes. You are the one closing the rounds: his running
+arrives as bursts, a round holds 10,000 work units, and work never moves between rounds. One
+screen, no scroll, no wallet.
 
 ## Identity
 
-The room, not the dashboard. A hamster wheel is a physical object with a rim, spokes, a
-hub and a hub that squeaks. The interface borrows that object instead of drawing a chart
-about it: the wheel is the board, the arc is the target, the torque bar is how much run
-is left in his legs.
+A workshop bench with a measuring rule on it. The paper is a chalk green, the ink is
+green-black, and the only bright thing in the room is the work that has actually been
+counted.
 
-Motif: **the rim**. One circle, one arc, one marker. Every readout is a thin rule under
-a circle, never a card, never a panel with a shadow.
+Motif: **the rule and the stamp**. The round is drawn as a steel rule with ten major ticks,
+one per thousand work units, because the whole whitepaper is about measuring a wheel. Every
+number is set as if it were stamped onto a plate: uppercase, monospaced, tight to its rule.
+Nothing floats, nothing glows, nothing is a card except the two sheets that interrupt play.
 
 ## Palette
 
 | Role | Value | Why |
 |---|---|---|
 | Paper | `#e9ece2` | A chalk-green bench top, not a grey UI canvas and not cream. The room is a workshop, so the paper has a tint of the machine in it. |
-| Ink | `#191c17` | Text and the marker. Nearly black, green-black rather than neutral. |
-| Machine green | `#1c6b45` | The power arc, the live chip, the block bar. One accent, used at the one moment that matters. |
-| Landing pad | `#d8e8bd` | The pale wedge behind the arc. It is a material, not a second accent: it only ever marks where to land. |
-| Live green | `#1c6b45` | State: he is running, settlement is paying. |
-| Ghost gold | `#6f5209` | State: he is asleep, the tempo is replayed, no settlement. |
-| Miss red | `#a3301f` | State: a miss, or the endpoint is unreachable. |
+| Ink | `#191c17` | Text and the fill. Nearly black, green-black rather than neutral. |
+| Machine green | `#1c6b45` | Work that is packed, the live chip, the sealed round. One accent, spent only on the count. |
+| Ghost gold | `#6f5209` | State: he is asleep, the difficulty is a replay, no settlement. |
+| Miss red | `#a3301f` | State: a burst was rejected, or an endpoint is unreachable. |
+| Rule line | `#c2c7b8` | The tick marks. They are a measuring scale, so they are drawn, not coloured. |
 
-The three state colours are a status system, not decoration. Each one appears only on
-the chip, the flash line, or the torque bar, never as a background wash. Every text token
-is checked against its own background: `--dim` 5.77:1, `--faint` 5.13:1, accent 5.42:1 on
-paper, all clearing AA.
+The three state colours are a status system, not decoration. Each appears only on the chip,
+the flash line, or the burst plate. Every text token is checked against its own background:
+`--ink` 14.4:1, `--dim` 5.77:1, `--faint` 5.13:1, the primary button 5.03:1 on paper, all
+clearing AA. In dark theme the lowest ratio is 6.45:1.
 
 ## Typography
 
 | Face | Where | Why |
 |---|---|---|
-| Big Shoulders Display 800 / 600 | Score numerals, the wordmark, section titles | A plate stamped on a machine: tall, narrow, industrial. Numbers have to be legible from across a room. |
-| JetBrains Mono 400 | Telemetry values, labels, buttons | The numbers come off a machine endpoint, so they are set in a machine face. This is a readout, not a terminal costume: there is no fake window and no typed-out command. |
-| Work Sans 400 / 600 | Prose only (tagline, how-it-works, result note) | Quiet and plain. It is the hamster's voice, and it never touches a number. |
+| Big Shoulders Display 800 / 600 | Burst numerals, the score, the wordmark, sheet titles | A plate stamped on a machine: tall, narrow, industrial. The burst has to be readable at arm's length while a clock is running. |
+| JetBrains Mono 400 / 600 | Every measured value, every label, every button | The numbers come off a machine endpoint, so they are set in a machine face, and tabular figures keep a live counter from jittering. This is a readout, not a terminal costume: there is no fake window, no prompt, no typed-out command. |
+| Work Sans 400 | Sheet prose only | Long explanation needs a text face. It never appears in the play area, where every word is a label. |
 
-Uppercase labels with `0.12em` to `0.16em` tracking are used on HUD labels only, at 9 to
-10px, because that is what a physical control panel does. No uppercase headline anywhere.
+**On the uppercase micro-labels** (R-06): `ROUND`, `PACKED`, `CAP`, `WORK UNITS` are set at
+9–10px with 0.16em tracking. This is the one place tracking is deliberately wide, because
+these labels sit under a scale where the eye needs them to read as a scale's engraving
+rather than as prose. They are never more than three words, never a headline, and never
+used to decorate a section that has no data under it.
 
-## Dials
+## Layout
 
-**ENERGY 2 / RHYTHM 2 / MOTION 2**
+One composition held for the whole game: wordmark and controls on one line, the rule, the
+chute, two actions, one flash line, one readout strip. The board is centred in whatever
+height the viewport has left, so a tall screen gets air above and below the same block
+instead of a void in the middle. The only break in the composition is a sheet, which covers
+the screen because it is a different mode of attention.
 
-- ENERGY 2: the page says hello with a large circle and a two-word wordmark, not with a
-  hero, a subtitle, two buttons and a screenshot.
-- RHYTHM 2: one composition, held. The board is the page. The only rhythm break is the
-  thin rule that separates the readout strip from the wheel.
-- MOTION 2: motion exists only where it carries meaning. The marker moves because the
-  wheel moves. Bars transition at `0.12s` linear because they are a gauge. Nothing
-  fades up, floats, scales or bounces on entry.
+Dials: **ENERGY 2 / RHYTHM 2 / MOTION 1**. Calm instrument, even spacing, almost no motion.
 
-## Two rooms
+## Motion and elevation, and why
 
-| | DAY (default) | NIGHT |
-|---|---|---|
-| Ground | `#e9ece2` chalk-green paper | `#131713` night-garage black-green |
-| Accent | `#1c6b45` | `#86dc9e`, the same green lifted until it clears AA on dark |
-| Landing pad | pale lime `#d8e8bd` | dark moss `#26301c` |
-| Why | A lit workshop with one instrument in it | The same workshop after hours, where the wheel is the only lit thing |
+- **Shadow (R-12)**: exactly two elements carry one, the chute plate and a sheet card. Both
+  are things that sit on top of the bench rather than in it. Nothing else floats.
+- **Motion (R-19)**: three transitions exist and each answers a question. The fill width
+  answers "how much of the round is gone", the burst clock answers "how long do I have", and
+  the plate's press state answers "did that register". There is no entrance animation, no
+  fade-up, no bounce, no confetti on a sealed round: the number is the reward.
+- The clock is a `transform` on a single bar, so it runs on the compositor and never
+  reflows the layout.
 
-Day follows `prefers-color-scheme` on first visit, the toggle overrides it, and the
-choice is remembered in `localStorage` under `legday.theme.v1`. The wheel is drawn on a
-canvas, so its colours are tokens too (`--wheel-*`), never literals in the drawing code.
+## What this refuses
 
-## Not someone else's build
-
-The CODE lane already has entries that read the same `/v1/status` feed. Before shipping,
-every one of them was opened and compared against this build, on four axes: what the
-player does, what they can lose, what the page looks like, and what it is called.
-
-| Their build | What it is | Why this is not it |
-|---|---|---|
-| Squeek Out | Hold-and-bail game with SQK and NFT-block rewards, wallet required | There is no stake here and nothing to bail from: the wheel is a timing target, the clock is torque, and the score is skill only. |
-| Squeek race | Spectator race where hourly work units are split across five fictional hamsters | Nothing here is simulated and nothing is a race: the marker turns at the published cadence and you tap it. |
-| Squeek or Sleep | Prediction market on each 10-minute round | No wagering, no rounds to call, no wallet signature. |
-| Wheel Canvas | Generative art painted from wheel telemetry | The canvas here is a playfield with a hit window, not an artwork. |
-| Hamster Tower | One floor per settled round, shared and endless | Block closes only bank a bonus inside an active shift, and they build nothing permanent. |
-| Squeektoshi Live / Hamster Track | Read-only status dashboards | This is a game that happens to read the status, not a dashboard. |
-
-Surface checks, since those are what make two sites feel like the same site: the type
-stack (Big Shoulders Display / JetBrains Mono / Work Sans) is not used by any of the
-eighteen projects on the board, and the palette is green on chalk paper, while the
-closest neighbours are navy-and-gold, black-and-amber, white-and-red and cream-and-amber.
-Radii are another tell: everything here is either square or a circle, with no 8/12/18px
-card corners anywhere.
-
-## The holder tier
-
-A tier system is where a game like this usually stops being free. This one does not: the
-lookup is opt-in, read-only, and buys difficulty rather than access.
-
-- **Free stays free.** No shift is gated. A visitor with no profile gets the full arc and the
-  same seed as everyone else on that block.
-- **The tier is a handicap, not a pass.** LIGHT, HEAVY and PRIME each narrow the power arc,
-  widen the drift and multiply the steps. Harder to play, worth more per step.
-- **It is not only Squeeks.** Twenty holder collections, the builder badges and the three
-  one-of-one trophies all carry weight, because a tier that counted one collection would be
-  ignoring most of what a Squeekchain profile is. The status line names what it found rather
-  than showing a bare number.
-- **It is read-only on purpose.** No signature, so it cannot prove ownership. That is the
-  design, not a hole: a claimed tier you do not hold only makes the game harder for you. The
-  card says `TIER`, never `HOLDER`, so a shared screenshot never asserts a wallet it cannot
-  back.
-- **The badge is set in the accent colour at the top of the card**, right of the wordmark and
-  clear of the dial, because the multiplier is the reason the score is that size.
-
-The badge endpoint sends CORS headers only to `squeekchain.com`, so `api.php` proxies that one
-read server-side. It is the only server-side code in the project, and it is deliberately the
-dullest file in it: GET only, two hosts, two path shapes, nothing stored.
-
-## Non-negotiables
-
-1. **Never claim live when it is not live.** When the hamster is idle or the reading is
-   stale, the arcade says GHOST SHIFT and refuses to pay a settlement bonus. Honesty is
-   the product.
-2. **No numbers that are not measured.** Every figure on screen comes from
-   `/v1/status` or from this browser's own saved shifts. Nothing is estimated.
-3. **No wallet connection, no signature, no token.** The footer says so, and the code has no
-   wallet code to disable. The one address the page can accept is typed into HOLDER SHIFT for
-   a read-only lookup, and it is never used to sign anything.
-4. **Two rooms, one identity.** The arcade ships in two lights: **DAY** (chalk paper) and
-   **NIGHT** (night-garage black-green). They are the same room at different hours, not a
-   filter pass: the wheel, the arc, the landing pad and the one green accent survive both,
-   and every text token is re-picked so it clears WCAG AA on its own background. The accent
-   is lighter at night because `#1c6b45` fails on a dark ground; the landing pad becomes
-   dark moss instead of pale lime for the same reason. A theme that breaks a single control
-   is a defect, so both rooms are clicked through before shipping.
+- No wallet, no signature, no token, no purchase.
+- No multiplier invented to make a tier feel rewarding. Holder status buys sight, and the
+  copy says so in those words.
+- No fake "live" claim: when the wheel is idle the chip says GHOST and the shift says it is
+  a replay.
+- No number on the page that a reader cannot recompute from the four expressions printed in
+  HOW THIS WORKS.

@@ -3,9 +3,11 @@
    Three rules shape this file.
 
    One: the arcade is free for everybody. Nobody is ever asked for a wallet to
-   play, and no shift is locked behind a token. What a profile gets is a harder
-   shift that pays more, which they opt into by pasting an address or a member
-   code.
+   play, and no shift is locked behind a token. What a profile gets is one burst
+   of sight: the chute shows the next burst before it arrives, so the player can
+   decide whether the room they have left is worth spending. It is not a
+   multiplier and it does not touch the score, because nothing in the whitepaper
+   makes a Squeek worth more work than another.
 
    Two: it is not only Squeeks. Squeekchain hands out holder badges for twenty
    other collections (Punks, Apes, Milady, IMD, Normies, Yield Fields and the
@@ -17,8 +19,8 @@
 
    Three: the lookup is read-only and unsigned, so it cannot prove the wallet
    belongs to the person at the keyboard. That is deliberate. Claiming a tier
-   you do not hold only makes the arc narrower and the swings wilder for you,
-   so there is nothing to gain by lying. For the same reason the card says
+   you do not hold buys one preview of a burst you were about to be shown
+   anyway, so there is nothing to gain by lying. For the same reason the card says
    "TIER" rather than "HOLDER": it reports which tier the run was played on,
    and nothing about who owns what.
 
@@ -37,10 +39,12 @@ const LegHolder = (() => {
   // weight counts a staked Squeek twice: staking is the action that actually
   // puts the NFT to work, so it should move you up the ladder faster than a
   // Squeek sitting still in a wallet
+  // A tier is a name and a threshold, and that is all: it buys sight, so there
+  // is no multiplier or difficulty modifier to carry here.
   const TIERS = [
-    { id: "light", name: "LIGHT", min: 1, mult: 1.5, arc: 0.86, drift: 1.25 },
-    { id: "heavy", name: "HEAVY", min: 3, mult: 2.0, arc: 0.74, drift: 1.5 },
-    { id: "prime", name: "PRIME", min: 6, mult: 2.5, arc: 0.62, drift: 1.8 },
+    { id: "light", name: "LIGHT", min: 1 },
+    { id: "heavy", name: "HEAVY", min: 3 },
+    { id: "prime", name: "PRIME", min: 6 },
   ];
 
   // the three one-of-one badges. Someone holding one of these has been here
@@ -80,13 +84,19 @@ const LegHolder = (() => {
       if (!saved || !saved.tier) return null;
       const tier = TIERS.find((t) => t.id === saved.tier);
       if (!tier) return null;
-      return { ...saved, ...tier };
+      return { ...saved, tier };
     } catch (err) {
       return null;
     }
   }
 
   function save(result) {
+    // nothing to remember when the profile carries nothing: storing a null tier
+    // would only be read back and rejected on the next load
+    if (!result || !result.tier) {
+      clear();
+      return;
+    }
     try {
       localStorage.setItem(KEY, JSON.stringify({
         id: result.id,
