@@ -10,9 +10,11 @@ When he is asleep, the game says so and drops into a **GHOST SHIFT**: it replays
 
 Live now: https://vm-0-13-ubuntu.tail1b7f8d.ts.net/legday/
 
-Open the site and tap. No wallet, no account, no download.
+Open the site and press START. No wallet, no account, no download.
 
-- **Tap / click / space**: step. Perfect taps hold the combo, loose taps break it.
+- **START**: the only control that begins a shift. Everything else on the page can be used
+  first, so reading HOW THIS WORKS or turning the sound off never starts the game underneath you.
+- **Tap / click / space** (during a shift): step. Perfect taps hold the combo, loose taps break it.
 - **Power arc**: narrows as he speeds up. The arc you see is the arc you hit.
 - **Torque**: the shift ends when it reaches zero.
 - **NIGHT MODE**: one button flips the arcade between a daylight room and the same room after dark. Both themes are fully styled, and the choice is remembered.

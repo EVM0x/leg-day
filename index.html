@@ -38,8 +38,14 @@ try {
   </header>
 
   <section class="board" id="board" aria-label="The wheel">
-    <canvas id="wheel" tabindex="0" role="button"
-      aria-label="The wheel. Tap the power arc, or press Enter or Space, to take a step."></canvas>
+    <div class="dial">
+      <canvas id="wheel" tabindex="0" role="application"
+        aria-label="The wheel. While a shift is running, tap the power arc or press Enter or Space to take a step."></canvas>
+      <button class="dial__start" id="startBtn" type="button">
+        <span class="dial__start-label">START</span>
+        <span class="dial__start-sub" id="startSub">SHIFT</span>
+      </button>
+    </div>
 
     <div class="readout">
       <div class="readout__cell">
@@ -89,7 +95,10 @@ try {
 
   <div class="sheet" id="results" hidden>
     <div class="sheet__card" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="resultsTitle">
-      <h2 id="resultsTitle">SHIFT OVER</h2>
+      <div class="sheet__bar">
+        <h2 id="resultsTitle">SHIFT OVER</h2>
+        <button class="sheet__close" id="closeResults" type="button" aria-label="Close the results">&times;</button>
+      </div>
       <dl class="sheet__grid">
         <div><dt>Steps</dt><dd id="rSteps">0</dd></div>
         <div><dt>Best combo</dt><dd id="rCombo">0</dd></div>
@@ -119,10 +128,13 @@ try {
 
   <aside class="sheet" id="how" hidden>
     <div class="sheet__card sheet__card--wide" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="howTitle">
-      <h2 id="howTitle">HOW THIS WORKS</h2>
+      <div class="sheet__bar">
+        <h2 id="howTitle">HOW THIS WORKS</h2>
+        <button class="sheet__close" id="closeHow" type="button" aria-label="Close and go back to the wheel">&times;</button>
+      </div>
       <p class="sheet__lead">Squeektoshi runs on a real wheel in a real room. Its cadence is published, so this arcade is not a fake clock: the marker turns at the speed he is actually turning.</p>
       <ol class="steps">
-        <li><strong>Tap the power arc.</strong> Every clean tap is one step. Steps are the whole score.</li>
+        <li><strong>Press START, then tap the power arc.</strong> START is the only thing that begins a shift, so you can read this page or turn the sound off first without the game running underneath you. Every clean tap on the arc is one step, and steps are the whole score.</li>
         <li><strong>Torque is the clock.</strong> Each step winds the wheel up, and torque bleeds away every second. When it empties, the shift ends.</li>
         <li><strong>Blocks pay.</strong> The bar under BLOCK FILL is the real block being mined right now. When a block closes while he is running, you bank a settlement bonus of one step per ten combo.</li>
         <li><strong>Sleep stops play.</strong> When he stops, the arcade drops to a GHOST SHIFT: it replays the last live cadence and says so. Ghost steps never bank a settlement bonus.</li>
@@ -141,7 +153,6 @@ try {
         </tbody>
       </table>
       <p class="sheet__note">Scores are kept in this browser only. Nothing is signed, nothing is spent, and no wallet is ever asked for.</p>
-      <button class="ghostbtn" id="closeHow" type="button">BACK TO THE WHEEL</button>
     </div>
   </aside>
 

@@ -45,6 +45,8 @@ const el = {
   rGhost: document.getElementById("rGhost"),
   rGhostCode: document.getElementById("rGhostCode"),
   soundBtn: document.getElementById("soundBtn"),
+  startBtn: document.getElementById("startBtn"),
+  startSub: document.getElementById("startSub"),
 };
 
 const chain = {
@@ -144,6 +146,11 @@ function paintChain() {
   if (lastPaintedMode && lastPaintedMode !== "live" && chain.status === "live") LegAudio.wake();
   lastPaintedMode = chain.status;
 
+  // the start button says what kind of shift you are about to play
+  if (el.startSub) {
+    el.startSub.textContent = chain.status === "live" ? "LIVE SHIFT" : chain.status === "offline" ? "OFFLINE" : "GHOST SHIFT";
+  }
+
   const rpm = chain.status === "live" ? chain.rpmMilli / 1000 : null;
   el.rpm.textContent = rpm === null
     ? (chain.status === "offline" ? "unreachable" : chain.status === "boot" ? "no reading" : "asleep")
@@ -201,6 +208,8 @@ function startShift() {
   el.steps.textContent = "0";
   el.combo.textContent = "0";
   el.results.hidden = true;
+  el.startBtn.hidden = true;
+  // the wheel takes the keyboard back so Space keeps tapping
   wheel.focus({ preventScroll: true });
   if (rafId === null) {
     lastFrame = performance.now();
@@ -211,6 +220,7 @@ function startShift() {
 function endShift() {
   game.running = false;
   if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
+  el.startBtn.hidden = false;
   draw();
 
   const acc = game.taps ? Math.round((game.perfects / game.taps) * 100) : 0;
@@ -263,7 +273,9 @@ function endShift() {
 function tap() {
   // the first tap is also the gesture that lets the browser start audio
   LegAudio.unlock();
-  if (!game.running) { startShift(); return; }
+  // a tap on the wheel is a step, never a start: the START control does that,
+  // so pressing anything else on the page can no longer begin a shift
+  if (!game.running) return;
   game.taps += 1;
 
   const half = arcHalfWidth();
@@ -291,7 +303,8 @@ function tap() {
     game.combo = 0;
     game.torque += TORQUE_MISS;
     LegAudio.hit("miss");
-    LegGhost.note(game.elapsed * 1000, game.angle, 1);
+    // a miss is not a step, so it does not belong in the ghost's timeline:
+    // the rival should only ever be seen landing steps it actually scored
     flash("MISS", "bad");
   }
 
@@ -347,6 +360,12 @@ function sizeCanvas() {
   wheel.width = Math.max(1, Math.round(r.width * dpr));
   wheel.height = Math.max(1, Math.round(r.height * dpr));
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  // the START control is sized off the rim, so it never covers the power arc
+  if (el.startBtn) {
+    const d = Math.max(84, Math.min(132, Math.round(Math.min(r.width, r.height) * 0.30)));
+    el.startBtn.style.width = d + "px";
+    el.startBtn.style.height = d + "px";
+  }
 }
 
 function loop(now) {
@@ -521,17 +540,8 @@ function draw() {
   ctx.fillStyle = game.running ? C.marker : C.markerIdle;
   ctx.fill();
 
-  // centre readout while idle: the only call to action the page needs
-  if (!game.running) {
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = C.label;
-    ctx.font = "600 " + Math.round(R * 0.115) + 'px "Barlow Condensed", sans-serif';
-    ctx.fillText("TAP TO START", cx, cy + R * 0.22);
-    ctx.fillStyle = C.sublabel;
-    ctx.font = Math.round(R * 0.055) + 'px "IBM Plex Mono", monospace';
-    ctx.fillText(chain.status === "live" ? "LIVE SHIFT" : "GHOST SHIFT", cx, cy + R * 0.37);
-  }
+  // nothing is drawn in the middle while idle: the START button sits there,
+  // and a second call to action underneath it would be two buttons in one place
 }
 
 function strokeArc(cx, cy, r, from, to, colour, width) {
@@ -563,14 +573,24 @@ function writeShifts(list) {
 
 /* ---------- wiring ---------- */
 
+// pointerdown on the wheel is a step only; the START button starts the shift
 wheel.addEventListener("pointerdown", (e) => { e.preventDefault(); tap(); });
+
+el.startBtn.addEventListener("click", () => {
+  LegAudio.unlock();
+  startShift();
+});
+
 document.addEventListener("keydown", (e) => {
   if (e.code === "Space" || e.code === "ArrowDown" || e.code === "Enter") {
     const tag = document.activeElement && document.activeElement.tagName;
     // a focused button or the ghost-code field keeps its own keys
     if (tag === "BUTTON" || tag === "INPUT") return;
+    if (!el.how.hidden || !el.results.hidden) return;
     e.preventDefault();
-    tap();
+    // Space is the shortcut for whatever the START button would do
+    if (game.running) tap();
+    else { LegAudio.unlock(); startShift(); }
   }
 });
 
@@ -647,6 +667,7 @@ function closeSheet(sheet) {
 
 howBtn.addEventListener("click", () => openSheet(el.how));
 document.getElementById("closeHow").addEventListener("click", () => closeSheet(el.how));
+document.getElementById("closeResults").addEventListener("click", () => closeSheet(el.results));
 
 // tapping the dimmed backdrop closes, which is the escape hatch a phone expects
 [el.results, el.how].forEach((sheet) => {
