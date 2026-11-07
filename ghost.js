@@ -1,4 +1,4 @@
-/* LEG DAY ghost: your last shift, recorded as a timeline of taps, replayed as a rival.
+/* Squeek Leg Day ghost: your last shift, recorded as a timeline of taps, replayed as a rival.
    A ghost is a list of {t, a, q} where t is milliseconds into the shift, a is the angle
    the marker was at when you tapped, and q is 0 for a perfect step, 1 for a good one.
    It lives in localStorage and travels as a short base64 string, so racing a friend

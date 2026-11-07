@@ -1,4 +1,4 @@
-/* LEG DAY, a Squeekchain arcade.
+/* Squeek Leg Day, a Squeekchain arcade.
    The marker turns at the cadence published by api.squeekchain.com/v1/status.
    Nothing here signs, spends, or stores a key. */
 
@@ -60,6 +60,15 @@ const el = {
   roundTag: document.getElementById("roundTag"),
   rRound: document.getElementById("rRound"),
   cardBtn: document.getElementById("cardBtn"),
+  holderChip: document.getElementById("holderChip"),
+  holderBtn: document.getElementById("holderBtn"),
+  holder: document.getElementById("holder"),
+  holderInput: document.getElementById("holderInput"),
+  holderCheck: document.getElementById("holderCheck"),
+  holderStatus: document.getElementById("holderStatus"),
+  holderClear: document.getElementById("holderClear"),
+  rRaw: document.getElementById("rRaw"),
+  rHolder: document.getElementById("rHolder"),
 };
 
 const chain = {
@@ -96,6 +105,8 @@ const game = {
   ghostIdx: 0,
   ghostSteps: 0,
   round: null,             // frozen at START: the round you are actually playing
+  holder: null,            // frozen at START: the tier you opted into, if any
+  rawSteps: 0,             // steps before the holder multiplier
 };
 
 let rafId = null;
@@ -123,11 +134,23 @@ function activeRound() {
   return game.running ? game.round : chain.round;
 }
 
+// the holder tier in force, frozen the same way the round is: switching tier
+// mid-shift would change the target under the player's finger
+function activeHolder() {
+  return game.running ? game.holder : LegHolder.active();
+}
+
+function scoreFor(raw) {
+  const mult = activeHolder() ? activeHolder().mult : 1;
+  return Math.round(raw * mult);
+}
+
 function arcHalfWidth() {
   const t = (clampedRps() - RPS_MIN) / (RPS_MAX - RPS_MIN);
   const base = ((30 - 12 * t) * Math.PI) / 180;
   const r = activeRound();
-  return base * (r ? r.arcScale : 1);
+  const h = activeHolder();
+  return base * (r ? r.arcScale : 1) * (h ? h.arc : 1);
 }
 
 // the arc does not sit still: the round's seed swings it, so two shifts on two
@@ -135,7 +158,9 @@ function arcHalfWidth() {
 function arcCentre() {
   const r = activeRound();
   if (!r) return Math.PI;
-  return normalise(Math.PI + LegRound.drift(r, game.running ? game.elapsed : 0));
+  const h = activeHolder();
+  const swing = LegRound.drift(r, game.running ? game.elapsed : 0) * (h ? h.drift : 1);
+  return normalise(Math.PI + swing);
 }
 
 async function poll() {
@@ -275,9 +300,12 @@ function paintChain() {
   lastPaintedMode = chain.status;
 
   // the start button says what kind of shift you are about to play
+  const holder = LegHolder.active();
   if (el.startSub) {
-    el.startSub.textContent = chain.status === "live" ? "LIVE SHIFT" : chain.status === "offline" ? "OFFLINE" : "GHOST SHIFT";
+    const base = chain.status === "live" ? "LIVE SHIFT" : chain.status === "offline" ? "OFFLINE" : "GHOST SHIFT";
+    el.startSub.textContent = holder ? holder.name + " · " + base : base;
   }
+  paintHolder(holder);
 
   const rpm = chain.status === "live" ? chain.rpmMilli / 1000 : null;
   el.rpm.textContent = rpm === null
@@ -307,10 +335,11 @@ function settle(blocks) {
   if (!game.running || game.modeAtStart !== "live") return;
   const bonus = Math.floor(game.combo / 10) * blocks;
   if (bonus <= 0) return;
-  game.steps += bonus;
+  game.rawSteps += bonus;
+  game.steps = scoreFor(game.rawSteps);
   game.settlement += bonus;
   el.steps.textContent = game.steps;
-  flash("SETTLEMENT +" + bonus, "pay");
+  flash("SETTLEMENT +" + (game.steps - scoreFor(game.rawSteps - bonus)), "pay");
 }
 
 /* ---------- game ---------- */
@@ -330,6 +359,9 @@ function startShift() {
   // the round is frozen here: whatever block is open at START is the block you
   // played, even if it settles before your torque runs out
   game.round = chain.round;
+  // and so is the tier, for the same reason
+  game.holder = LegHolder.active();
+  game.rawSteps = 0;
   game.elapsed = 0;
   game.tickAngle = 0;
   game.ghost = LegGhost.load();
@@ -359,10 +391,23 @@ function endShift() {
   const acc = game.taps ? Math.round((game.perfects / game.taps) * 100) : 0;
   const played = game.modeAtStart === "live" ? "LIVE" : "GHOST";
   const tag = game.round ? game.round.tag : "";
-  const line = `LEG DAY: ${game.steps} steps, best combo ${game.bestCombo}, ${acc}% cadence, ${played}, block #${game.blockAtStart}${tag ? " seed " + tag : ""}`;
+  const holder = game.holder;
+  const raw = game.rawSteps;
+  const tierLine = holder ? `${holder.name} ×${holder.mult}` : "open shift";
+  const line = `Squeek Leg Day: ${game.steps} steps${holder ? ` (${raw} raw, ${holder.name} ×${holder.mult})` : ""}, best combo ${game.bestCombo}, ${acc}% cadence, ${played}, block #${game.blockAtStart}${tag ? " seed " + tag : ""}`;
 
   const shifts = readShifts();
-  shifts.push({ steps: game.steps, combo: game.bestCombo, acc, played, block: game.blockAtStart, tag, at: Date.now() });
+  shifts.push({
+    steps: game.steps,
+    raw,
+    tier: holder ? holder.tier : null,
+    combo: game.bestCombo,
+    acc,
+    played,
+    block: game.blockAtStart,
+    tag,
+    at: Date.now(),
+  });
   shifts.sort((a, b) => b.steps - a.steps);
   const kept = shifts.slice(0, STORE_MAX);
   writeShifts(kept);
@@ -376,6 +421,8 @@ function endShift() {
   el.rBlock.textContent = game.blockAtStart ? "#" + game.blockAtStart : "none";
   if (el.rRound) el.rRound.textContent = game.round ? game.round.tag : "unseeded";
   el.rPlace.textContent = "#" + Math.min(rank, kept.length) + " of " + kept.length;
+  if (el.rRaw) el.rRaw.textContent = holder ? String(raw) + " × " + holder.mult + " = " + game.steps : String(game.steps);
+  if (el.rHolder) el.rHolder.textContent = holder ? holder.name + " · " + holder.labels.join(", ") : "open shift";
   // the shift you just played becomes a ghost, and a ghost travels as a short code
   const mine = LegGhost.close({
     steps: game.steps,
@@ -406,6 +453,9 @@ function endShift() {
   // cannot change the card after the fact
   lastCard = {
     steps: game.steps,
+    raw,
+    tier: holder ? holder.name : "",
+    tierLine,
     combo: game.bestCombo,
     acc,
     played,
@@ -413,7 +463,7 @@ function endShift() {
     tag,
     code,
     line,
-    url: "legday.evm0x.com",
+    url: "squeeklegday.com",
   };
   openSheet(el.results);
 }
@@ -434,7 +484,8 @@ function tap() {
 
   if (delta <= half) {
     game.perfects += 1;
-    game.steps += 1;
+    game.rawSteps += 1;
+    game.steps = scoreFor(game.rawSteps);
     game.combo += 1;
     game.bestCombo = Math.max(game.bestCombo, game.combo);
     game.torque = Math.min(TORQUE_MAX, game.torque + TORQUE_PERFECT);
@@ -442,7 +493,8 @@ function tap() {
     LegGhost.note(game.elapsed * 1000, game.angle, 0);
     flash(game.combo > 1 ? `PERFECT · ${game.combo}×` : "PERFECT", "good");
   } else if (delta <= goodHalf) {
-    game.steps += 1;
+    game.rawSteps += 1;
+    game.steps = scoreFor(game.rawSteps);
     game.combo = 0;
     game.torque = Math.min(TORQUE_MAX, game.torque + TORQUE_GOOD);
     LegAudio.hit("good");
@@ -838,7 +890,7 @@ document.getElementById("closeHow").addEventListener("click", () => closeSheet(e
 document.getElementById("closeResults").addEventListener("click", () => closeSheet(el.results));
 
 // tapping the dimmed backdrop closes, which is the escape hatch a phone expects
-[el.results, el.how].forEach((sheet) => {
+[el.results, el.how, el.holder].forEach((sheet) => {
   sheet.addEventListener("click", (e) => {
     if (e.target === sheet) closeSheet(sheet);
   });
@@ -861,6 +913,102 @@ el.soundBtn.addEventListener("click", () => {
 
 paintSound();
 
+/* ---------- holder shift ---------- */
+
+// A poll repaints the HUD every five seconds, and the holder status line lives
+// in that HUD. Without this, a "no Squeek in that wallet" message would be
+// wiped by the next tick before it could be read. A note is held for a few
+// seconds and wins over the tier text while it is fresh.
+let holderNote = null;
+
+function noteHolder(text, tier) {
+  holderNote = { text, tier, at: Date.now() };
+  paintHolder(LegHolder.active());
+}
+
+function paintHolder(h) {
+  if (el.holderChip) {
+    el.holderChip.hidden = !h;
+    if (h) el.holderChip.textContent = h.name + " ×" + h.mult;
+  }
+  if (!el.holderStatus) return;
+  if (h) {
+    el.holderClear.hidden = false;
+    // never write into the field while it has focus: the poll repaints the HUD
+    // every five seconds and would eat the address mid-keystroke
+    if (document.activeElement !== el.holderInput) el.holderInput.value = h.id;
+  } else {
+    el.holderClear.hidden = true;
+  }
+  if (holderNote && Date.now() - holderNote.at < 8000) {
+    el.holderStatus.dataset.tier = holderNote.tier;
+    el.holderStatus.textContent = holderNote.text;
+    return;
+  }
+  if (h) {
+    el.holderStatus.dataset.tier = h.tier;
+    el.holderStatus.textContent =
+      h.name + " ×" + h.mult + ": " + h.labels.join(", ") +
+      " (weight " + h.weight + ")" +
+      ". Arc ×" + h.arc + ", swings ×" + h.drift + ".";
+  } else {
+    el.holderStatus.dataset.tier = "none";
+    el.holderStatus.textContent = "Open shift: full arc, no multiplier.";
+  }
+}
+
+async function checkHolder() {
+  const value = el.holderInput.value;
+  el.holderCheck.disabled = true;
+  el.holderCheck.textContent = "READING";
+  try {
+    const found = await LegHolder.check(value);
+    if (!found.tier) {
+      // holding nothing is not an error, and it must not silently leave an old
+      // tier switched on: drop back to the open shift and say why
+      LegHolder.clear();
+      holderNote = null;
+      paintChain();
+      if (rafId === null) draw();
+      noteHolder(
+        found.labels[0] === "no Squeek" || found.labels[0].startsWith("no ")
+          ? "Nothing on " + LegHolder.short(found.id) + " yet: " + found.labels.join(", ") +
+            ". The open shift is still yours, full arc and all."
+          : "Weight " + found.weight + " is under the first tier, so the open shift stands: " +
+            found.labels.join(", ") + ".",
+        "none"
+      );
+      return;
+    }
+    LegHolder.save(found);
+    holderNote = null;
+    paintChain();
+    if (rafId === null) draw();
+  } catch (err) {
+    noteHolder(err.message + ".", "error");
+  } finally {
+    el.holderCheck.disabled = false;
+    el.holderCheck.textContent = "CHECK";
+  }
+}
+
+el.holderBtn.addEventListener("click", () => {
+  paintHolder(LegHolder.active());
+  openSheet(el.holder);
+});
+document.getElementById("closeHolder").addEventListener("click", () => closeSheet(el.holder));
+el.holderCheck.addEventListener("click", checkHolder);
+el.holderInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); checkHolder(); }
+});
+el.holderClear.addEventListener("click", () => {
+  LegHolder.clear();
+  el.holderInput.value = "";
+  paintChain();
+  if (rafId === null) draw();
+  el.holderInput.focus();
+});
+
 /* ---------- racing a pasted ghost ---------- */
 
 const ghostInput = document.getElementById("ghostInput");
@@ -882,7 +1030,8 @@ document.getElementById("loadGhostBtn").addEventListener("click", () => {
 
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
-  if (!el.how.hidden) closeSheet(el.how);
+  if (!el.holder.hidden) closeSheet(el.holder);
+  else if (!el.how.hidden) closeSheet(el.how);
   else if (!el.results.hidden) closeSheet(el.results);
 });
 
@@ -896,4 +1045,4 @@ poll();
 setInterval(poll, POLL_MS);
 
 // exposed for testing only
-window.LEGDAY = { chain, game, tap, startShift, endShift, arcHalfWidth, clampedRps, ghost: window.LegGhost, audio: window.LegAudio };
+window.LEGDAY = { chain, game, tap, startShift, endShift, arcHalfWidth, clampedRps, ghost: window.LegGhost, audio: window.LegAudio, holder: window.LegHolder };

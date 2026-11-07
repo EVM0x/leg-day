@@ -1,4 +1,4 @@
-/* LEG DAY sound. Synthesised with WebAudio, so the arcade ships no audio files:
+/* Squeek Leg Day sound. Synthesised with WebAudio, so the arcade ships no audio files:
    every tone here is generated from the same numbers the wheel is drawn from.
    Nothing is fetched, nothing is licensed, nothing is sampled. */
 

@@ -1,6 +1,6 @@
 # DESIGN.md
 
-Direction for LEG DAY. This file records the direction the build already follows, so
+Direction for Squeek Leg Day. This file records the direction the build already follows, so
 the rules in `antislop.md` have something to filter against. If any line here does not
 match what you want, change it here first and the build follows.
 
@@ -95,6 +95,30 @@ closest neighbours are navy-and-gold, black-and-amber, white-and-red and cream-a
 Radii are another tell: everything here is either square or a circle, with no 8/12/18px
 card corners anywhere.
 
+## The holder tier
+
+A tier system is where a game like this usually stops being free. This one does not: the
+lookup is opt-in, read-only, and buys difficulty rather than access.
+
+- **Free stays free.** No shift is gated. A visitor with no profile gets the full arc and the
+  same seed as everyone else on that block.
+- **The tier is a handicap, not a pass.** LIGHT, HEAVY and PRIME each narrow the power arc,
+  widen the drift and multiply the steps. Harder to play, worth more per step.
+- **It is not only Squeeks.** Twenty holder collections, the builder badges and the three
+  one-of-one trophies all carry weight, because a tier that counted one collection would be
+  ignoring most of what a Squeekchain profile is. The status line names what it found rather
+  than showing a bare number.
+- **It is read-only on purpose.** No signature, so it cannot prove ownership. That is the
+  design, not a hole: a claimed tier you do not hold only makes the game harder for you. The
+  card says `TIER`, never `HOLDER`, so a shared screenshot never asserts a wallet it cannot
+  back.
+- **The badge is set in the accent colour at the top of the card**, right of the wordmark and
+  clear of the dial, because the multiplier is the reason the score is that size.
+
+The badge endpoint sends CORS headers only to `squeekchain.com`, so `api.php` proxies that one
+read server-side. It is the only server-side code in the project, and it is deliberately the
+dullest file in it: GET only, two hosts, two path shapes, nothing stored.
+
 ## Non-negotiables
 
 1. **Never claim live when it is not live.** When the hamster is idle or the reading is
@@ -102,8 +126,9 @@ card corners anywhere.
    the product.
 2. **No numbers that are not measured.** Every figure on screen comes from
    `/v1/status` or from this browser's own saved shifts. Nothing is estimated.
-3. **No wallet, no signature, no token.** The footer says so, and the code has no
-   wallet code to disable.
+3. **No wallet connection, no signature, no token.** The footer says so, and the code has no
+   wallet code to disable. The one address the page can accept is typed into HOLDER SHIFT for
+   a read-only lookup, and it is never used to sign anything.
 4. **Two rooms, one identity.** The arcade ships in two lights: **DAY** (chalk paper) and
    **NIGHT** (night-garage black-green). They are the same room at different hours, not a
    filter pass: the wheel, the arc, the landing pad and the one green accent survive both,

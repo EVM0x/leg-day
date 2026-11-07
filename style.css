@@ -108,12 +108,19 @@ body {
   gap: 12px;
   border-bottom: 1px solid var(--line);
   padding-bottom: clamp(6px, 1.2vh, 12px);
+  /* the two words in the wordmark made the left block wider, and on a tablet
+     that was enough to push the control row past the edge of the screen. The
+     row is allowed to wrap rather than overflow. */
+  flex-wrap: wrap;
 }
 
 .wordmark {
   font-family: var(--display);
   font-weight: 800;
-  font-size: clamp(26px, 5.4vw, 44px);
+  /* 12 characters now instead of 6, so the ceiling comes down a step. It still
+     fills the same visual weight because the letters are wider than they are
+     tall in this face. */
+  font-size: clamp(24px, 4.6vw, 38px);
   letter-spacing: 0.02em;
   line-height: 0.9;
   margin: 0;
@@ -626,3 +633,72 @@ body {
 
   .flash { top: 2%; font-size: clamp(13px, 3vw, 17px); }
 }
+
+/* ---------- holder shift ---------- */
+
+.chip--holder {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--pad);
+  font-weight: 600;
+}
+
+.holdbox {
+  display: grid;
+  /* minmax(0,1fr), not 1fr: an input has a wide min-content width, and a plain
+     1fr column will not shrink below it, which pushes the CHECK button off a
+     320px screen */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  margin: 14px 0 4px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.holdbox .k {
+  font-family: var(--data);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.holdbox__status {
+  margin: 0;
+  font-family: var(--data);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--dim);
+  min-height: 2.6em;
+}
+
+.holdbox__status[data-tier="light"],
+.holdbox__status[data-tier="heavy"],
+.holdbox__status[data-tier="prime"] {
+  color: var(--ink);
+}
+
+.holdbox__status[data-tier="error"] { color: var(--red); }
+
+.ghostbtn--quiet {
+  justify-self: start;
+  color: var(--dim);
+  border-color: transparent;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  padding: 6px 0;
+}
+
+.ghostbtn--quiet:hover { color: var(--ink); border-color: transparent; }
+
+/* the HUD grew a fourth control, so the whole strip has to be allowed to wrap
+   before it drags the board sideways */
+@media (max-width: 720px) {
+  .hud__right { flex-wrap: wrap; justify-content: flex-end; }
+}
+
+@media (max-width: 420px) {
+  .hud__right { gap: 5px; }
+  .chip--holder { order: 2; }
+}
+

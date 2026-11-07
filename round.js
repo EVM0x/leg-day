@@ -1,4 +1,4 @@
-/* ROUND SEED, the part of LEG DAY that comes from the chain and not from the API.
+/* ROUND SEED, the part of Squeek Leg Day that comes from the chain and not from the API.
 
    Every shift is played against the block that was open when you pressed START.
    The block's hash is hashed down to a 32-bit seed, and the seed decides three
@@ -140,16 +140,38 @@ const LegCard = (() => {
     x.fillStyle = C.ink;
     x.fill();
 
-    // wordmark
+    // wordmark. Two words now, so it is set smaller and stacked the way the HUD
+    // does it: SQUEEK in ink, LEGDAY in the accent. The tier badge below it in
+    // the corner starts at y=105, so the block stays above that.
     x.fillStyle = C.ink;
-    x.font = '800 62px "Big Shoulders Display", Impact, sans-serif';
-    x.fillText("LEG", 72, 118);
-    const legW = x.measureText("LEG").width;
+    x.font = '800 52px "Big Shoulders Display", Impact, sans-serif';
+    x.fillText("SQUEEK", 72, 106);
+    const sqW = x.measureText("SQUEEK ").width;
     x.fillStyle = C.accent;
-    x.fillText("DAY", 72 + legW + 6, 118);
+    x.fillText("LEGDAY", 72 + sqW, 106);
     x.fillStyle = C.soft;
     x.font = '400 22px "JetBrains Mono", ui-monospace, monospace';
-    x.fillText("YOU ARE SQUEKETOSHI'S LEGS", 72, 154);
+    x.fillText("YOU ARE SQUEKETOSHI'S LEGS", 72, 150);
+
+    // the tier, when the shift was played on one: a holder's card has to say so,
+    // because the multiplier is the reason the number is that size. It sits in
+    // the top-right corner, clear of the dial, which starts at y=105.
+    if (s.tier) {
+      const label = "TIER · " + s.tier + (s.tierLine ? " " + s.tierLine.split(" ").pop() : "");
+      x.font = '600 20px "JetBrains Mono", ui-monospace, monospace';
+      const w = x.measureText(label).width;
+      x.beginPath();
+      x.roundRect(1128 - w - 34, 44, w + 34, 40, 20);
+      x.fillStyle = C.accent;
+      x.globalAlpha = 0.14;
+      x.fill();
+      x.globalAlpha = 1;
+      x.strokeStyle = C.accent;
+      x.lineWidth = 1;
+      x.stroke();
+      x.fillStyle = C.accent;
+      x.fillText(label, 1128 - w - 17, 71);
+    }
 
     // the score, which is the only number that matters. Four digits is where a
     // 190px numeral starts to crowd the dial, so it steps down instead of over.
@@ -159,18 +181,18 @@ const LegCard = (() => {
     x.fillText(String(s.steps), 66, 340);
     x.fillStyle = C.soft;
     x.font = '400 24px "JetBrains Mono", ui-monospace, monospace';
-    x.fillText("STEPS", 72, 382);
+    x.fillText("STEPS" + (s.raw && s.raw !== s.steps ? " · " + s.raw + " RAW" : ""), 72, 382);
 
     const rows = [
       ["BEST COMBO", String(s.combo)],
       ["CADENCE", s.acc + "%"],
-      ["PLAYED", s.played],
+      ["PLAYED", s.played + (s.tier ? " · " + s.tier : "")],
       ["BLOCK", s.block ? "#" + s.block : "none"],
       ["ROUND SEED", s.tag ? s.tag + " / from block #" + (s.block || "?") : "no seed"],
     ];
     x.font = '400 21px "JetBrains Mono", ui-monospace, monospace';
     rows.forEach(([k, v], i) => {
-      const y = 440 + i * 34;
+      const y = 436 + i * 30;
       x.fillStyle = C.soft;
       x.fillText(k, 72, y);
       x.fillStyle = C.ink;
@@ -211,7 +233,7 @@ const LegCard = (() => {
     try {
       const file = new File([blob], name, { type: "image/png" });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: "LEG DAY", text: stats.line });
+        await navigator.share({ files: [file], title: "Squeek Leg Day", text: stats.line });
         return true;
       }
     } catch (err) {

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>LEG DAY: the Squeekchain arcade</title>
+<title>Squeek Leg Day: the Squeekchain arcade</title>
 <meta name="description" content="You are Squeektoshi's legs. Tap in time with the real wheel and keep the shift alive.">
 <meta name="theme-color" content="#f5f5f7">
 <meta name="squeekchain-project" content="PROJECT_ID_PLACEHOLDER">
@@ -26,13 +26,15 @@ try {
 
   <header class="hud">
     <div class="hud__left">
-      <h1 class="wordmark">LEG<span>DAY</span></h1>
+      <h1 class="wordmark">SQUEEK<span>LEGDAY</span></h1>
       <p class="tagline">You are Squeektoshi's legs.</p>
     </div>
     <nav class="hud__right" aria-label="Arcade controls">
       <span class="chip" id="mode" data-mode="boot">CONNECTING</span>
+      <span class="chip chip--holder" id="holderChip" hidden>HOLDER</span>
       <button class="ghostbtn" id="soundBtn" type="button" aria-pressed="false">SOUND ON</button>
       <button class="ghostbtn" id="themeBtn" type="button" aria-pressed="false">NIGHT MODE</button>
+      <button class="ghostbtn" id="holderBtn" type="button" aria-expanded="false" aria-controls="holder">HOLDER SHIFT</button>
       <button class="ghostbtn" id="howBtn" type="button" aria-expanded="false" aria-controls="how">HOW THIS WORKS</button>
     </nav>
   </header>
@@ -112,6 +114,8 @@ try {
         <div><dt>Round seed</dt><dd id="rRound">unseeded</dd></div>
         <div><dt>Place</dt><dd id="rPlace">not ranked</dd></div>
         <div><dt>Ghost race</dt><dd id="rGhost">no ghost</dd></div>
+        <div><dt>Raw steps</dt><dd id="rRaw">0</dd></div>
+        <div><dt>Holder shift</dt><dd id="rHolder">open shift</dd></div>
       </dl>
       <p class="sheet__line" id="rLine"></p>
       <div class="sheet__actions">
@@ -147,6 +151,7 @@ try {
         <li><strong>Every shift leaves a ghost.</strong> Your taps are recorded as a timeline, and the next shift races it: the small marks inside the wheel are the angles your ghost hit, and VS GHOST is the gap between you. The code on the results card carries a ghost to anyone else, no server needed.</li>
         <li><strong>Every shift is a round.</strong> The block open when you press START is the block you played, and its state seeds the challenge: how wide the power arc is, how far it wanders and how often it swings are all derived from that block. Same block, same shift, for everyone. ROUND SEED is the first four hex of the seed, so two players on one block can compare.</li>
         <li><strong>You can hear it.</strong> The ticks are one per quarter turn, so the tempo you hear is the tempo he is running. Sound is generated in the browser, not loaded from a file, and the button in the corner turns it off.</li>
+        <li><strong>Holders get a harder shift, not a locked one.</strong> Paste a Squeek address under HOLDER SHIFT and the power arc narrows and the swings grow, and every step you land is multiplied. It is one read of the public accounts endpoint and it is never signed, so it cannot prove the wallet is yours; it does not need to, because a tier you do not hold only makes the game harder for you. The open shift is always there, at full arc and no multiplier.</li>
       </ol>
       <table class="fields">
         <caption>Fields read from api.squeekchain.com/v1/status, every five seconds</caption>
@@ -163,11 +168,43 @@ try {
       <p class="sheet__note">Scores are kept in this browser only. Nothing is signed, nothing is spent, and no wallet is ever asked for.</p>
     </div>
   </aside>
+  <aside class="sheet" id="holder" hidden>
+    <div class="sheet__card" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="holderTitle">
+      <div class="sheet__bar">
+        <h2 id="holderTitle">HOLDER SHIFT</h2>
+        <button class="sheet__close" id="closeHolder" type="button" aria-label="Close and go back to the wheel">&times;</button>
+      </div>
+      <p class="sheet__lead">The arcade is free for everyone and it stays that way. If your Squeekchain profile holds something, paste it and the shift gets harder on purpose: a narrower power arc, wilder swings, and a multiplier on every step you land. It is not only Squeeks. The twenty holder collections, the builder badges and the one-of-one trophies all count, because that is what a profile actually is.</p>
+      <div class="holdbox">
+        <label class="k" for="holderInput">SQUEEK ADDRESS OR MEMBER CODE</label>
+        <div class="ghostbox__row">
+          <input class="ghostbox__input" id="holderInput" type="text" autocomplete="off" spellcheck="false"
+            placeholder="0x... or q5ga9bvy" aria-describedby="holderNote">
+          <button class="ghostbtn" id="holderCheck" type="button">CHECK</button>
+        </div>
+        <p class="holdbox__status" id="holderStatus" aria-live="polite">Open shift: full arc, no multiplier.</p>
+        <button class="ghostbtn ghostbtn--quiet" id="holderClear" type="button" hidden>DROP BACK TO THE OPEN SHIFT</button>
+      </div>
+      <table class="fields">
+        <caption>What a profile is worth, and what each tier does to the shift</caption>
+        <tbody>
+          <tr><td><code>1</code></td><td>per Squeek in the wallet, per holder collection, per builder badge</td></tr>
+          <tr><td><code>2</code></td><td>per staked Squeek, because staking is the half that does the work</td></tr>
+          <tr><td><code>3</code></td><td>per one-of-one trophy (First Squeek, First Invitooor, First Buildooooor)</td></tr>
+          <tr><td><code>LIGHT</code></td><td>weight 1 to 2: arc &times;0.86, swings &times;1.25, steps &times;1.5</td></tr>
+          <tr><td><code>HEAVY</code></td><td>weight 3 to 5: arc &times;0.74, swings &times;1.5, steps &times;2</td></tr>
+          <tr><td><code>PRIME</code></td><td>weight 6 or more: arc &times;0.62, swings &times;1.8, steps &times;2.5</td></tr>
+        </tbody>
+      </table>
+      <p class="sheet__note" id="holderNote">An address is read through <code>api.squeekchain.com/v1/accounts/</code>. A member code is read through <code>community.squeekchain.com/v1/community/profiles/</code>, which only sends CORS headers to squeekchain.com, so <code>api.php</code> in this folder fetches it server-side and hands back nothing but the badge ids, the Aura and the rank. Neither read is signed, so neither can prove the profile is yours. That is on purpose: a tier you do not hold only narrows the arc and widens the swings for you, so claiming one is a handicap, not a cheat. Nothing is stored on the server, and the tier stays in this browser.</p>
+    </div>
+  </aside>
 
 </main>
 <script src="audio.js"></script>
 <script src="round.js"></script>
 <script src="ghost.js"></script>
+<script src="holder.js"></script>
 <script src="game.js"></script>
 </body>
 </html>
