@@ -3,6 +3,16 @@
    Nothing here signs, spends, or stores a key. */
 
 const API = "https://api.squeekchain.com/v1/status";
+
+// The API is the only place the hardware telemetry lives, but the settled work
+// is on Sepolia, so the chain can be read without it. These are read-only
+// eth_calls: no wallet, no key, no transaction.
+const CORE = "0xFD6C166D4B8E2962E65746a13e5a0797CD4dE0c4";
+const RPCS = [
+  "https://ethereum-sepolia-rpc.publicnode.com",
+  "https://sepolia.gateway.tenderly.co",
+  "https://sepolia.rpc.thirdweb.com",
+];
 const POLL_MS = 5000;
 
 const TORQUE_START = 55;
@@ -58,6 +68,9 @@ const chain = {
   distanceMm: 0,
   seen: false,
   lastPollAt: 0,
+  source: null,            // api | chain | null
+  workPerThousandBlocks: 0,
+  paused: false,
 };
 
 const game = {
@@ -129,14 +142,77 @@ async function poll() {
     chain.distanceMm = Number(m.distanceMm) || 0;
     chain.seen = true;
     chain.lastPollAt = Date.now();
+    chain.source = "api";
 
     if (prevHeight && chain.blockHeight > prevHeight) settle(chain.blockHeight - prevHeight);
 
     paintChain();
   } catch (err) {
     chain.status = "offline";
+    // the telemetry is gone, but the settled work is not: read SqueekCore
+    // directly so the block bar keeps telling the truth instead of blanking
+    const core = await readCore();
+    if (core) {
+      const prevHeight = chain.blockHeight;
+      chain.blockHeight = core.blockHeight;
+      chain.blockProgress = core.blockProgress;
+      chain.workPerThousandBlocks = core.workPerThousandBlocks;
+      chain.paused = core.paused;
+      chain.seen = true;
+      chain.source = "chain";
+      chain.status = "ghost";
+      if (prevHeight && chain.blockHeight > prevHeight) settle(chain.blockHeight - prevHeight);
+    } else {
+      chain.source = null;
+    }
     paintChain();
   }
+}
+
+// SqueekCore.state() returns eight static words:
+// settledThroughRound u64, cumulativeWork u64, cumulativeBlockUnits u96,
+// blockHeight u64, blockProgress u96, workPerThousandBlocks u32,
+// authorizationNonce u256, paused bool.
+function decodeState(hex) {
+  const body = (hex || "").replace(/^0x/, "");
+  if (body.length < 64 * 8) return null;
+  const word = (i) => BigInt("0x" + body.slice(i * 64, i * 64 + 64));
+  return {
+    settledThroughRound: Number(word(0)),
+    cumulativeWork: Number(word(1)),
+    blockHeight: Number(word(3)),
+    blockProgress: Number(word(4)),
+    workPerThousandBlocks: Number(word(5)),
+    paused: word(7) !== 0n,
+  };
+}
+
+async function readCore() {
+  for (const rpc of RPCS) {
+    try {
+      const ctl = new AbortController();
+      const timer = setTimeout(() => ctl.abort(), 4500);
+      const res = await fetch(rpc, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0", id: 1, method: "eth_call",
+          params: [{ to: CORE, data: "0xc19d93fb" }, "latest"],
+        }),
+        signal: ctl.signal,
+      });
+      clearTimeout(timer);
+      if (!res.ok) continue;
+      const d = await res.json();
+      const state = decodeState(d && d.result);
+      // a deployment that has settled nothing decodes to zeroes, which is not
+      // a useful reading either
+      if (state && state.blockHeight > 0) return state;
+    } catch (err) {
+      // try the next endpoint
+    }
+  }
+  return null;
 }
 
 function paintChain() {
@@ -166,11 +242,13 @@ function paintChain() {
   el.blockBar.parentElement.setAttribute("aria-valuenow", String(Math.round(fill * 100)));
 
   el.source.textContent =
-    chain.status === "live"
-      ? "Live from api.squeekchain.com/v1/status, he is running"
-      : chain.status === "offline"
-        ? "api.squeekchain.com is not answering, so the wheel is on a ghost tempo"
-        : "api.squeekchain.com/v1/status: he is asleep, so the wheel replays its last live cadence";
+    chain.source === "chain"
+      ? "api.squeekchain.com is not answering, so the block is read from SqueekCore on Sepolia"
+      : chain.status === "live"
+        ? "Live from api.squeekchain.com/v1/status, he is running"
+        : chain.status === "offline"
+          ? "Neither api.squeekchain.com nor Sepolia is answering, so the wheel is on a ghost tempo"
+          : "api.squeekchain.com/v1/status: he is asleep, so the wheel replays its last live cadence";
 }
 
 function settle(blocks) {

@@ -22,6 +22,16 @@ Open the site and press START. No wallet, no account, no download.
 - **VS GHOST**: every shift you play is recorded as a timeline of taps. The next shift races it in real time: the marks inside the wheel are the angles your ghost landed, and the gap counter tells you whether you are ahead. The results card hands you a code, and anyone who pastes it races your ghost, no server involved.
 - **SOUND**: one tick per quarter turn, so the tempo you hear is the tempo he is running, plus a distinct hit sound per tap quality. Synthesised in the browser with WebAudio, so there is no audio file to download and nothing sampled.
 
+## Where the numbers come from
+
+The wheel telemetry is hardware, so it only exists in the API: `/v1/status` gives
+`rpmMilli`, `coreStatus`, `freshness` and `distanceMm`. The settled work does not need the
+API, because it is on Sepolia, so if `/v1/status` stops answering the page calls
+`SqueekCore.state()` at `0xFD6C166D4B8E2962E65746a13e5a0797CD4dE0c4` over a public RPC and
+keeps the block number and block fill true. Cadence cannot be read from the chain, so the
+wheel drops to a ghost tempo and the footer says which source it is on. Every read is an
+`eth_call`: no wallet, no key, no transaction, nothing spent.
+
 ## Racing someone else's ghost
 
 A ghost is a list of `{t, a, q}`: milliseconds into the shift, the angle the marker was at, and whether the tap was clean. It packs into a base64 string of roughly 100 to 150 characters and is stored under `legday.ghost.v1`. Paste a code into the results card and that ghost becomes your rival. Only a better run of your own replaces your saved ghost, so the rival keeps getting harder, unless you paste one in deliberately.

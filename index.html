@@ -152,6 +152,7 @@ try {
           <tr><td><code>measurement.distanceMm</code></td><td>how far he has run</td></tr>
         </tbody>
       </table>
+      <p class="sheet__note">If that API stops answering, the block bar is read straight from <code>SqueekCore.state()</code> at <code>0xFD6C166D4B8E2962E65746a13e5a0797CD4dE0c4</code> on Sepolia over a public RPC, so the settled work on screen stays true. The cadence cannot be read from the chain, so the wheel drops to a ghost tempo and says so rather than inventing one.</p>
       <p class="sheet__note">Scores are kept in this browser only. Nothing is signed, nothing is spent, and no wallet is ever asked for.</p>
     </div>
   </aside>
