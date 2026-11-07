@@ -90,6 +90,23 @@ const LegCard = (() => {
       : { bg: "#f5f5f7", ink: "#12160f", soft: "#5c6b60", accent: "#4f7a13", line: "#dfe3dd" };
   }
 
+  // Cut a string to the width it is allowed, with an ellipsis. A long shift
+  // packs a long ghost code, and at 19px one of those runs off the right edge
+  // of the card. The card is a picture of the shift, not the transport: the
+  // whole code is in COPY RESULT, so cutting it here loses nothing.
+  function fit(text, ctx, maxWidth) {
+    const s = String(text);
+    if (ctx.measureText(s).width <= maxWidth) return s;
+    let lo = 0;
+    let hi = s.length;
+    while (lo < hi) {
+      const mid = Math.ceil((lo + hi) / 2);
+      if (ctx.measureText(s.slice(0, mid) + "\u2026").width <= maxWidth) lo = mid;
+      else hi = mid - 1;
+    }
+    return s.slice(0, lo) + "\u2026";
+  }
+
   function render(s) {
     const C = palette();
     const cv = document.createElement("canvas");
@@ -206,7 +223,9 @@ const LegCard = (() => {
       x.fillText("RACE ME", 72, 606);
       x.fillStyle = C.ink;
       x.font = '600 19px "JetBrains Mono", ui-monospace, monospace';
-      x.fillText(s.code, 168, 606);
+      // the address and the mark own the right half of this line, so the code
+      // gets what is left and no more
+      x.fillText(fit(s.code, x, 520), 168, 606);
     }
 
     x.strokeStyle = C.line;
@@ -216,9 +235,22 @@ const LegCard = (() => {
     x.lineTo(1128, 566);
     x.stroke();
 
+    // the address, right aligned so the corner under it stays free for the mark
     x.fillStyle = C.soft;
     x.font = '400 18px "JetBrains Mono", ui-monospace, monospace';
-    x.fillText(s.url, 900 - x.measureText(s.url).width / 2 + 0, 606);
+    x.fillText(s.url, 1128 - x.measureText(s.url).width, 596);
+
+    // the maker's mark: a screenshot of this card is how the arcade travels, so
+    // the corner it lands in says where it came from. It sits clear of the
+    // bottom edge, not on it.
+    const mark = "SC FROM EVM0X";
+    x.fillStyle = C.soft;
+    x.font = '400 13px "JetBrains Mono", ui-monospace, monospace';
+    const markW = x.measureText(mark).width;
+    x.strokeStyle = C.line;
+    x.lineWidth = 1;
+    x.strokeRect(1128 - markW - 16, 602, markW + 16, 20);
+    x.fillText(mark, 1128 - markW - 8, 616);
     return cv;
   }
 

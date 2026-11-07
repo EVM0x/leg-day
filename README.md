@@ -10,7 +10,7 @@ Every shift is also a **round**. The block that is open when you press START is 
 
 ## Play
 
-Live now: https://vm-0-13-ubuntu.tail1b7f8d.ts.net/legday/
+Live now: https://squeeklegday.evm0x.com/
 
 Open the site and press START. No wallet, no account, no download.
 

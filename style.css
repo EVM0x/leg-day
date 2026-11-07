@@ -374,15 +374,55 @@ body {
 .foot {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 12px;
   border-top: 1px solid var(--line);
   padding-top: 8px;
   font-size: 11px;
   color: var(--faint);
   letter-spacing: 0.02em;
+  /* the credit joined the footer, so the row has to be able to give way on a
+     narrow phone rather than push the note off the edge */
+  flex-wrap: wrap;
 }
 
 .foot p { margin: 0; }
+
+.foot__right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  /* the note and the mark travel together in the right hand corner, on a wide
+     screen on one line and on a phone as two right-aligned lines */
+  margin-left: auto;
+}
+
+/* The maker's mark. It sits in the bottom right corner of every page so a
+   screenshot of the arcade always carries where it came from, and it is a
+   link so the claim can be checked rather than taken on trust. */
+.foot__mark {
+  font-family: var(--data);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--faint);
+  border: 1px solid var(--line);
+  padding: 3px 7px;
+  text-decoration: none;
+  white-space: nowrap;
+  /* when the note fills the row and the mark drops to a line of its own, this
+     keeps it in the corner it belongs in instead of starting at the margin */
+  margin-left: auto;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.foot__mark:hover,
+.foot__mark:focus-visible {
+  color: var(--ink);
+  border-color: var(--ink);
+}
 
 .sheet {
   position: fixed;
