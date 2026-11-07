@@ -8,6 +8,8 @@ When he is asleep, the game says so and drops into a **GHOST SHIFT**: it replays
 
 ## Play
 
+Live now: https://vm-0-13-ubuntu.tail1b7f8d.ts.net/legday/
+
 Open the site and tap. No wallet, no account, no download.
 
 - **Tap / click / space**: step. Perfect taps hold the combo, loose taps break it.
