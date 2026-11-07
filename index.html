@@ -31,6 +31,7 @@ try {
     </div>
     <nav class="hud__right" aria-label="Arcade controls">
       <span class="chip" id="mode" data-mode="boot">CONNECTING</span>
+      <button class="ghostbtn" id="soundBtn" type="button" aria-pressed="false">SOUND ON</button>
       <button class="ghostbtn" id="themeBtn" type="button" aria-pressed="false">NIGHT MODE</button>
       <button class="ghostbtn" id="howBtn" type="button" aria-expanded="false" aria-controls="how">HOW THIS WORKS</button>
     </nav>
@@ -56,6 +57,10 @@ try {
     </div>
 
     <div class="live">
+      <div class="live__row">
+        <span class="k">VS GHOST</span>
+        <span class="v" id="ghostDelta">no ghost yet</span>
+      </div>
       <div class="live__row">
         <span class="k">WHEEL</span>
         <span class="v" id="rpm">no reading</span>
@@ -83,7 +88,7 @@ try {
   </footer>
 
   <div class="sheet" id="results" hidden>
-    <div class="sheet__card" role="dialog" aria-modal="true" aria-labelledby="resultsTitle">
+    <div class="sheet__card" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="resultsTitle">
       <h2 id="resultsTitle">SHIFT OVER</h2>
       <dl class="sheet__grid">
         <div><dt>Steps</dt><dd id="rSteps">0</dd></div>
@@ -92,6 +97,7 @@ try {
         <div><dt>Played</dt><dd id="rMode">not played</dd></div>
         <div><dt>Block</dt><dd id="rBlock">none</dd></div>
         <div><dt>Place</dt><dd id="rPlace">not ranked</dd></div>
+        <div><dt>Ghost race</dt><dd id="rGhost">no ghost</dd></div>
       </dl>
       <p class="sheet__line" id="rLine"></p>
       <div class="sheet__actions">
@@ -99,11 +105,20 @@ try {
         <button class="ghostbtn" id="copyBtn" type="button">COPY RESULT</button>
       </div>
       <p class="sheet__note" id="rNote"></p>
+      <div class="ghostbox">
+        <span class="k">RACE A GHOST</span>
+        <p class="ghostbox__code" id="rGhostCode">play a shift to earn a code</p>
+        <div class="ghostbox__row">
+          <input class="ghostbox__input" id="ghostInput" type="text" autocomplete="off" spellcheck="false"
+            placeholder="paste a ghost code" aria-label="Ghost code to race">
+          <button class="ghostbtn" id="loadGhostBtn" type="button">RACE IT</button>
+        </div>
+      </div>
     </div>
   </div>
 
   <aside class="sheet" id="how" hidden>
-    <div class="sheet__card sheet__card--wide" role="dialog" aria-modal="true" aria-labelledby="howTitle">
+    <div class="sheet__card sheet__card--wide" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="howTitle">
       <h2 id="howTitle">HOW THIS WORKS</h2>
       <p class="sheet__lead">Squeektoshi runs on a real wheel in a real room. Its cadence is published, so this arcade is not a fake clock: the marker turns at the speed he is actually turning.</p>
       <ol class="steps">
@@ -111,6 +126,8 @@ try {
         <li><strong>Torque is the clock.</strong> Each step winds the wheel up, and torque bleeds away every second. When it empties, the shift ends.</li>
         <li><strong>Blocks pay.</strong> The bar under BLOCK FILL is the real block being mined right now. When a block closes while he is running, you bank a settlement bonus of one step per ten combo.</li>
         <li><strong>Sleep stops play.</strong> When he stops, the arcade drops to a GHOST SHIFT: it replays the last live cadence and says so. Ghost steps never bank a settlement bonus.</li>
+        <li><strong>Every shift leaves a ghost.</strong> Your taps are recorded as a timeline, and the next shift races it: the small marks inside the wheel are the angles your ghost hit, and VS GHOST is the gap between you. The code on the results card carries a ghost to anyone else, no server needed.</li>
+        <li><strong>You can hear it.</strong> The ticks are one per quarter turn, so the tempo you hear is the tempo he is running. Sound is generated in the browser, not loaded from a file, and the button in the corner turns it off.</li>
       </ol>
       <table class="fields">
         <caption>Fields read from api.squeekchain.com/v1/status, every five seconds</caption>
@@ -129,6 +146,8 @@ try {
   </aside>
 
 </main>
+<script src="audio.js"></script>
+<script src="ghost.js"></script>
 <script src="game.js"></script>
 </body>
 </html>

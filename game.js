@@ -41,6 +41,10 @@ const el = {
   rPlace: document.getElementById("rPlace"),
   rLine: document.getElementById("rLine"),
   rNote: document.getElementById("rNote"),
+  ghostDelta: document.getElementById("ghostDelta"),
+  rGhost: document.getElementById("rGhost"),
+  rGhostCode: document.getElementById("rGhostCode"),
+  soundBtn: document.getElementById("soundBtn"),
 };
 
 const chain = {
@@ -66,11 +70,18 @@ const game = {
   settlement: 0,
   blockAtStart: 0,
   modeAtStart: "ghost",
+  elapsed: 0,
+  tickAngle: 0,
+  ghost: null,
+  ghostIdx: 0,
+  ghostSteps: 0,
 };
 
 let rafId = null;
 let lastFrame = 0;
 let flashTimer = null;
+let lastPaintedMode = null;
+let ghostDeltaText = "";
 
 /* ---------- chain ---------- */
 
@@ -130,6 +141,8 @@ function paintChain() {
   const label = { boot: "CONNECTING", live: "LIVE", ghost: "GHOST SHIFT", offline: "OFFLINE" }[chain.status];
   el.mode.textContent = label;
   el.mode.dataset.mode = chain.status === "boot" ? "boot" : chain.status;
+  if (lastPaintedMode && lastPaintedMode !== "live" && chain.status === "live") LegAudio.wake();
+  lastPaintedMode = chain.status;
 
   const rpm = chain.status === "live" ? chain.rpmMilli / 1000 : null;
   el.rpm.textContent = rpm === null
@@ -177,6 +190,14 @@ function startShift() {
   game.settlement = 0;
   game.blockAtStart = chain.blockHeight;
   game.modeAtStart = chain.status === "live" ? "live" : "ghost";
+  game.elapsed = 0;
+  game.tickAngle = 0;
+  game.ghost = LegGhost.load();
+  game.ghostIdx = 0;
+  game.ghostSteps = 0;
+  LegGhost.begin();
+  ghostDeltaText = game.ghost ? "0 / " + game.ghost.steps : "no ghost yet";
+  el.ghostDelta.textContent = ghostDeltaText;
   el.steps.textContent = "0";
   el.combo.textContent = "0";
   el.results.hidden = true;
@@ -210,14 +231,38 @@ function endShift() {
   el.rMode.textContent = played;
   el.rBlock.textContent = game.blockAtStart ? "#" + game.blockAtStart : "none";
   el.rPlace.textContent = "#" + Math.min(rank, kept.length) + " of " + kept.length;
-  el.rLine.textContent = line;
+  // the shift you just played becomes a ghost, and a ghost travels as a short code
+  const mine = LegGhost.close({
+    steps: game.steps,
+    combo: game.bestCombo,
+    acc,
+    played,
+    block: game.blockAtStart,
+  });
+
+  if (game.ghost) {
+    const diff = game.steps - game.ghost.steps;
+    el.rGhost.textContent = diff === 0
+      ? "dead heat on " + game.ghost.steps
+      : (diff > 0 ? "+" + diff : String(diff)) + " vs " + game.ghost.steps;
+  } else {
+    el.rGhost.textContent = "first shift, no rival";
+  }
+
+  const code = mine ? LegGhost.encode(mine) : "";
+  el.rGhostCode.textContent = code || "nothing to race, this shift had no taps";
+  if (mine) LegGhost.save(mine);
+
+  el.rLine.textContent = code ? line + ", ghost code " + code : line;
   el.rNote.textContent = game.modeAtStart === "live"
     ? `Settlement paid ${game.settlement} steps on real blocks.`
     : "Ghost shift: no settlement bonus was paid, because he was not running.";
-  openSheet(el.results, document.getElementById("againBtn"));
+  openSheet(el.results);
 }
 
 function tap() {
+  // the first tap is also the gesture that lets the browser start audio
+  LegAudio.unlock();
   if (!game.running) { startShift(); return; }
   game.taps += 1;
 
@@ -232,15 +277,21 @@ function tap() {
     game.combo += 1;
     game.bestCombo = Math.max(game.bestCombo, game.combo);
     game.torque = Math.min(TORQUE_MAX, game.torque + TORQUE_PERFECT);
+    LegAudio.hit("perfect");
+    LegGhost.note(game.elapsed * 1000, game.angle, 0);
     flash(game.combo > 1 ? `PERFECT · ${game.combo}×` : "PERFECT", "good");
   } else if (delta <= goodHalf) {
     game.steps += 1;
     game.combo = 0;
     game.torque = Math.min(TORQUE_MAX, game.torque + TORQUE_GOOD);
+    LegAudio.hit("good");
+    LegGhost.note(game.elapsed * 1000, game.angle, 1);
     flash("GOOD · COMBO LOST", "bad");
   } else {
     game.combo = 0;
     game.torque += TORQUE_MISS;
+    LegAudio.hit("miss");
+    LegGhost.note(game.elapsed * 1000, game.angle, 1);
     flash("MISS", "bad");
   }
 
@@ -304,7 +355,19 @@ function loop(now) {
 
   if (game.running) {
     const sag = 0.55 + 0.45 * Math.max(0, game.torque) / TORQUE_MAX;
-    game.angle = normalise(game.angle + clampedRps() * sag * 2 * Math.PI * dt);
+    const turns = clampedRps() * sag * dt;
+    game.angle = normalise(game.angle + turns * 2 * Math.PI);
+    game.elapsed += dt;
+
+    // one tick per quarter revolution: what you hear is the cadence on the dial
+    game.tickAngle += turns;
+    while (game.tickAngle >= 0.25) {
+      game.tickAngle -= 0.25;
+      LegAudio.tick(clampedRps());
+    }
+
+    advanceGhost();
+
     game.torque = Math.max(0, game.torque - TORQUE_DECAY * dt);
     el.torque.style.transform = `scaleX(${(game.torque / TORQUE_MAX).toFixed(3)})`;
     el.torque.parentElement.setAttribute("aria-valuenow", String(Math.round((Math.max(0, game.torque) / TORQUE_MAX) * 100)));
@@ -315,6 +378,24 @@ function loop(now) {
   draw();
   // only keep the frame loop alive while a shift is running: an idle wheel is static
   rafId = game.running ? requestAnimationFrame(loop) : null;
+}
+
+// replay the rival shift on the clock you are playing against
+function advanceGhost() {
+  const g = game.ghost;
+  if (!g) return;
+  const ms = game.elapsed * 1000;
+  while (game.ghostIdx < g.events.length && g.events[game.ghostIdx].t <= ms) {
+    game.ghostIdx += 1;
+    game.ghostSteps += 1;
+  }
+  const diff = game.steps - game.ghostSteps;
+  const text = (diff > 0 ? "+" + diff : String(diff)) + " / " + g.steps;
+  // the loop runs at 60fps, so only touch the DOM when the number actually moves
+  if (text !== ghostDeltaText) {
+    ghostDeltaText = text;
+    el.ghostDelta.textContent = text;
+  }
 }
 
 function draw() {
@@ -401,6 +482,30 @@ function draw() {
   ctx.strokeStyle = C.hubLine;
   ctx.stroke();
 
+  // the ghost's fingerprints: every angle it landed, so you can see where it lived
+  if (game.ghost) {
+    ctx.strokeStyle = C.trail;
+    ctx.lineWidth = 1;
+    for (const e of game.ghost.events) {
+      const a = (e.a * Math.PI) / 180;
+      const p1 = polar(cx, cy, R * 0.71, a);
+      const p2 = polar(cx, cy, R * 0.77, a);
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.stroke();
+    }
+    // and its head, the angle it is standing on right now
+    if (game.running && game.ghostIdx > 0) {
+      const a = (game.ghost.events[game.ghostIdx - 1].a * Math.PI) / 180;
+      const gp = polar(cx, cy, R * 0.74, a);
+      ctx.beginPath();
+      ctx.arc(gp.x, gp.y, 3, 0, Math.PI * 2);
+      ctx.fillStyle = C.markerIdle;
+      ctx.fill();
+    }
+  }
+
   // marker
   const mp = polar(cx, cy, R * 0.93, game.angle);
   const mi = polar(cx, cy, R * 0.30, game.angle);
@@ -461,7 +566,9 @@ function writeShifts(list) {
 wheel.addEventListener("pointerdown", (e) => { e.preventDefault(); tap(); });
 document.addEventListener("keydown", (e) => {
   if (e.code === "Space" || e.code === "ArrowDown" || e.code === "Enter") {
-    if (document.activeElement && document.activeElement.tagName === "BUTTON") return;
+    const tag = document.activeElement && document.activeElement.tagName;
+    // a focused button or the ghost-code field keeps its own keys
+    if (tag === "BUTTON" || tag === "INPUT") return;
     e.preventDefault();
     tap();
   }
@@ -518,11 +625,17 @@ themeBtn.addEventListener("click", () => {
 const howBtn = document.getElementById("howBtn");
 let returnFocus = null;
 
-function openSheet(sheet, focusTarget) {
+function openSheet(sheet) {
   returnFocus = document.activeElement;
   sheet.hidden = false;
+  // focus the card, not a button at the bottom: on a short phone focusing the
+  // last control scrolls the sheet down and hides the heading it just opened
+  const card = sheet.querySelector(".sheet__card");
+  if (card) {
+    card.scrollTop = 0;
+    card.focus({ preventScroll: true });
+  }
   if (sheet === el.how) howBtn.setAttribute("aria-expanded", "true");
-  if (focusTarget) focusTarget.focus();
 }
 
 function closeSheet(sheet) {
@@ -532,8 +645,51 @@ function closeSheet(sheet) {
   returnFocus = null;
 }
 
-howBtn.addEventListener("click", () => openSheet(el.how, document.getElementById("closeHow")));
+howBtn.addEventListener("click", () => openSheet(el.how));
 document.getElementById("closeHow").addEventListener("click", () => closeSheet(el.how));
+
+// tapping the dimmed backdrop closes, which is the escape hatch a phone expects
+[el.results, el.how].forEach((sheet) => {
+  sheet.addEventListener("click", (e) => {
+    if (e.target === sheet) closeSheet(sheet);
+  });
+});
+
+/* ---------- sound ---------- */
+
+function paintSound() {
+  const on = !LegAudio.isMuted();
+  el.soundBtn.textContent = on ? "SOUND ON" : "SOUND OFF";
+  el.soundBtn.setAttribute("aria-pressed", String(on));
+}
+
+el.soundBtn.addEventListener("click", () => {
+  LegAudio.unlock();
+  LegAudio.setMuted(!LegAudio.isMuted());
+  paintSound();
+  wheel.focus({ preventScroll: true });
+});
+
+paintSound();
+
+/* ---------- racing a pasted ghost ---------- */
+
+const ghostInput = document.getElementById("ghostInput");
+
+document.getElementById("loadGhostBtn").addEventListener("click", () => {
+  const parsed = LegGhost.decode(ghostInput.value);
+  if (!parsed) {
+    ghostInput.value = "";
+    ghostInput.placeholder = "that code did not read, try again";
+    ghostInput.focus();
+    return;
+  }
+  ghostInput.value = "";
+  ghostInput.placeholder = "paste a ghost code";
+  LegGhost.save(parsed, true);
+  closeSheet(el.results);
+  startShift();
+});
 
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
@@ -551,4 +707,4 @@ poll();
 setInterval(poll, POLL_MS);
 
 // exposed for testing only
-window.LEGDAY = { chain, game, tap, startShift, endShift, arcHalfWidth, clampedRps };
+window.LEGDAY = { chain, game, tap, startShift, endShift, arcHalfWidth, clampedRps, ghost: window.LegGhost, audio: window.LegAudio };
