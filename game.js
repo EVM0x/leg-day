@@ -463,7 +463,7 @@ function endShift() {
     tag,
     code,
     line,
-    url: "squeeklegday.com",
+    url: "squeeklegday.evm0x.com",
   };
   openSheet(el.results);
 }
